@@ -13,7 +13,7 @@
   <img src="assets/karina.jpg" alt="Karina" width="800">
 </p>
 
-YouTube 영상에서 **원하는 목소리**로 Claude Code 알림음을 생성합니다.
+> YouTube 영상에서 **원하는 목소리**로 Claude Code 알림음을 생성합니다.
 
 ## 빠른 시작
 
