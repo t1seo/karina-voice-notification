@@ -13,6 +13,9 @@ from tqdm import tqdm
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore", message=".*pad_token_id.*")
 
+# Post-processing flag
+ENABLE_POST_PROCESSING = True
+
 PROJECT_ROOT = Path(__file__).parent.parent
 ASSETS_DIR = PROJECT_ROOT / "assets"
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -41,7 +44,8 @@ def generate_cloned_voice(
     text: str,
     ref_audio_path: Path,
     ref_text: str,
-    output_path: Path
+    output_path: Path,
+    post_process: bool = True,
 ):
     """Generate speech with cloned voice."""
     wavs, sr = model.generate_voice_clone(
@@ -54,6 +58,21 @@ def generate_cloned_voice(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     sf.write(str(output_path), wavs[0], sr)
+
+    # Apply post-processing if enabled
+    if post_process and ENABLE_POST_PROCESSING:
+        try:
+            from post_process import post_process_file
+            post_process_file(
+                output_path,
+                denoise=True,
+                eq=True,
+                dynamics=True,
+                loudness_normalize=True,
+                target_lufs=-14.0,
+            )
+        except ImportError:
+            pass  # Post-processing dependencies not installed
 
     return output_path
 

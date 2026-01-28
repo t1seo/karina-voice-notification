@@ -28,6 +28,7 @@ mac = { features = ["mac"], solve-group = "mac" }
 
 [tasks]
 pipeline = "python src/pipeline.py"
-install-deps = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar"
-install-deps-mac = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar mlx mlx-whisper"
-install-deps-linux = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar faster-whisper"
+install-deps = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar noisereduce pedalboard pyloudnorm"
+install-deps-mac = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar mlx mlx-whisper noisereduce pedalboard pyloudnorm"
+install-deps-linux = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar faster-whisper noisereduce pedalboard pyloudnorm"
+post-process = "python src/post_process.py"

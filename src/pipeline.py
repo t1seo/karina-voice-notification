@@ -578,11 +578,29 @@ def setup_tts_model():
     return local_dir
 
 
-def post_process_audio(audio: np.ndarray, sr: int, silence_ms: int = 300) -> tuple[np.ndarray, int]:
-    """Post-process audio: add silence at beginning."""
+def add_silence(audio: np.ndarray, sr: int, silence_ms: int = 300) -> tuple[np.ndarray, int]:
+    """Add silence at the beginning of audio."""
     silence_samples = int(sr * silence_ms / 1000)
     silence = np.zeros(silence_samples, dtype=audio.dtype)
     return np.concatenate([silence, audio]), sr
+
+
+def enhance_audio(audio: np.ndarray, sr: int) -> np.ndarray:
+    """Apply audio enhancement: denoise, EQ, dynamics, loudness normalization."""
+    try:
+        from post_process import post_process_audio as pp_audio
+        return pp_audio(
+            audio, sr,
+            denoise=True,
+            eq=True,
+            dynamics=True,
+            loudness_normalize=True,
+            target_lufs=-14.0,
+            denoise_strength=0.6,
+        )
+    except ImportError:
+        logger.warning("Post-processing dependencies not installed. Skipping enhancement.")
+        return audio
 
 
 def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path, device_info: DeviceInfo):
@@ -622,8 +640,11 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
                 if device_info.device_type == DeviceType.MPS:
                     torch.mps.synchronize()
 
-                processed_audio, sr = post_process_audio(wavs[0], sr, silence_ms=300)
-                sf.write(str(output_path), processed_audio, sr)
+                # Add silence at the beginning
+                audio_with_silence, sr = add_silence(wavs[0], sr, silence_ms=300)
+                # Apply audio enhancement (denoise, EQ, dynamics, loudness)
+                enhanced_audio = enhance_audio(audio_with_silence, sr)
+                sf.write(str(output_path), enhanced_audio, sr)
                 progress.advance(task)
 
     logger.success(f"All notifications generated in: {NOTIFICATIONS_DIR}")
