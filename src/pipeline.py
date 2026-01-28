@@ -73,6 +73,16 @@ TEXTS = {
         "postprocess_disable_desc": "Use raw TTS output without enhancement",
         "postprocess_complete": "✨ Post-processing Complete!",
         "postprocess_files": "Processed {n} files",
+        # Source separation
+        "separate_title": "Source Separation",
+        "separate_subtitle": "Remove background music from audio",
+        "separate_enable": "🎵 Enable BGM Removal",
+        "separate_enable_desc": "Use Demucs AI to extract vocals (slower but cleaner)",
+        "separate_disable": "⏭️  Skip BGM Removal",
+        "separate_disable_desc": "Use original audio as-is",
+        "separate_running": "Separating vocals from background music...",
+        "separate_complete": "✅ Vocals extracted successfully",
+        "separate_not_installed": "Demucs not installed. Run: pip install demucs",
         # Split mode
         "split_title": "Split Mode",
         "split_subtitle": "Choose how to split the audio",
@@ -136,6 +146,16 @@ TEXTS = {
         "postprocess_disable_desc": "원본 TTS 출력 그대로 사용",
         "postprocess_complete": "✨ 후처리 완료!",
         "postprocess_files": "{n}개 파일 처리됨",
+        # Source separation
+        "separate_title": "음원 분리",
+        "separate_subtitle": "배경음악에서 보컬 추출",
+        "separate_enable": "🎵 배경음악 제거",
+        "separate_enable_desc": "Demucs AI로 보컬만 추출 (느리지만 깨끗함)",
+        "separate_disable": "⏭️  배경음악 제거 건너뛰기",
+        "separate_disable_desc": "원본 오디오 그대로 사용",
+        "separate_running": "배경음악에서 보컬 분리 중...",
+        "separate_complete": "✅ 보컬 추출 완료",
+        "separate_not_installed": "Demucs가 설치되지 않았습니다. 실행: pip install demucs",
         # Split mode
         "split_title": "분할 모드 선택",
         "split_subtitle": "오디오 분할 방식을 선택하세요",
@@ -366,6 +386,24 @@ def show_postprocess_menu() -> bool:
     return result is None or result == 0
 
 
+def show_source_separation_menu() -> bool:
+    """Show source separation (BGM removal) menu. Returns True if enabled."""
+    options = [
+        {"label": t("separate_enable"), "desc": t("separate_enable_desc")},
+        {"label": t("separate_disable"), "desc": t("separate_disable_desc")},
+    ]
+
+    menu = InteractiveMenu(
+        title=t("separate_title"),
+        subtitle=t("separate_subtitle"),
+        options=options
+    )
+
+    result = menu.run()
+    # Default to disabled if cancelled (separation is slow)
+    return result == 0
+
+
 def parse_time_input(time_str: str) -> float | None:
     """Parse time input in various formats (seconds or MM:SS)."""
     time_str = time_str.strip()
@@ -425,6 +463,50 @@ def download_audio(url: str, output_name: str = "karina_sample") -> Path:
         console.print()
         return downloaded[0]
     raise FileNotFoundError("Download failed")
+
+
+def separate_vocals_from_audio(input_file: Path, device_info: DeviceInfo) -> Path:
+    """Separate vocals from background music using Demucs."""
+    console.print(Panel("[bold]Step 1.5: Separate Vocals from Background Music (Demucs)[/bold]", style="blue"))
+
+    try:
+        from post_process import separate_vocals_to_file, check_demucs_available
+    except ImportError:
+        logger.error(t("separate_not_installed"))
+        return input_file
+
+    if not check_demucs_available():
+        logger.error(t("separate_not_installed"))
+        return input_file
+
+    # Determine device for demucs
+    if device_info.device_type == DeviceType.CUDA:
+        device = "cuda"
+    elif device_info.device_type == DeviceType.MPS:
+        device = "mps"
+    else:
+        device = "cpu"
+
+    output_path = RAW_AUDIO_DIR / f"{input_file.stem}_vocals.wav"
+
+    logger.info(t("separate_running"))
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+        progress.add_task(t("separate_running"), total=None)
+        try:
+            separate_vocals_to_file(
+                input_file,
+                output_path,
+                model="htdemucs",
+                device=device,
+            )
+            logger.success(t("separate_complete"))
+            console.print()
+            return output_path
+        except Exception as e:
+            logger.error(f"Source separation failed: {e}")
+            logger.warning("Falling back to original audio")
+            console.print()
+            return input_file
 
 
 def split_audio(input_file: Path, segment_duration: int = 15) -> list[Path]:
@@ -726,6 +808,10 @@ DEFAULT_YOUTUBE_URL = "https://www.youtube.com/watch?v=r96zEiIHVf4"
 def run_full_pipeline(url: str, device_info: DeviceInfo):
     """Run the complete pipeline."""
     audio_file = download_audio(url)
+    # Ask about source separation (BGM removal)
+    enable_separation = show_source_separation_menu()
+    if enable_separation:
+        audio_file = separate_vocals_from_audio(audio_file, device_info)
     segments = split_audio(audio_file)
     selected_segment = select_segment(segments)
     if selected_segment is None:
@@ -739,9 +825,13 @@ def run_full_pipeline(url: str, device_info: DeviceInfo):
     show_completion()
 
 
-def run_download_only(url: str):
+def run_download_only(url: str, device_info: DeviceInfo):
     """Download and split audio only."""
     audio_file = download_audio(url)
+    # Ask about source separation (BGM removal)
+    enable_separation = show_source_separation_menu()
+    if enable_separation:
+        audio_file = separate_vocals_from_audio(audio_file, device_info)
     segments = split_audio(audio_file)
     selected = select_segment(segments)
     if selected:
@@ -882,7 +972,7 @@ def main():
             run_full_pipeline(url, device_info)
         elif action == "download":
             url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] [dim]({t('youtube_url_prompt')})[/dim]: ").strip() or args.url
-            run_download_only(url)
+            run_download_only(url, device_info)
         elif action == "transcribe":
             run_from_transcribe(device_info)
         elif action == "generate":

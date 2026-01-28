@@ -1,15 +1,128 @@
 #!/usr/bin/env python3
-"""Audio post-processing pipeline for TTS output enhancement."""
+"""Audio post-processing pipeline for TTS output enhancement and source separation."""
 
 import numpy as np
 import soundfile as sf
 from pathlib import Path
 from typing import Optional, Tuple
+import subprocess
+import tempfile
+import shutil
 
 # Lazy imports to avoid loading heavy libraries until needed
 _noisereduce = None
 _pedalboard = None
 _pyloudnorm = None
+
+
+# ============== Source Separation (Demucs) ==============
+
+def separate_vocals(
+    input_path: Path,
+    output_dir: Optional[Path] = None,
+    model: str = "htdemucs",
+    device: str = "auto",
+) -> Path:
+    """
+    Separate vocals from background music using Demucs.
+
+    Args:
+        input_path: Path to input audio file
+        output_dir: Directory for output (default: same as input)
+        model: Demucs model to use (htdemucs, htdemucs_ft, mdx_extra)
+        device: Device to use (auto, cuda, cpu, mps)
+
+    Returns:
+        Path to extracted vocals file
+    """
+    input_path = Path(input_path)
+    if output_dir is None:
+        output_dir = input_path.parent
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Determine device
+    if device == "auto":
+        import torch
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+
+    # Run demucs
+    cmd = [
+        "python", "-m", "demucs",
+        "--two-stems", "vocals",
+        "-n", model,
+        "-d", device,
+        "-o", str(output_dir),
+        str(input_path),
+    ]
+
+    print(f"Running Demucs ({model}) on {device}...")
+    subprocess.run(cmd, check=True)
+
+    # Find output vocals file
+    stem_name = input_path.stem
+    vocals_path = output_dir / model / stem_name / "vocals.wav"
+
+    if not vocals_path.exists():
+        raise FileNotFoundError(f"Vocals file not found: {vocals_path}")
+
+    return vocals_path
+
+
+def separate_vocals_to_file(
+    input_path: Path,
+    output_path: Path,
+    model: str = "htdemucs",
+    device: str = "auto",
+    cleanup: bool = True,
+) -> Path:
+    """
+    Separate vocals and save to a specific output path.
+
+    Args:
+        input_path: Path to input audio file
+        output_path: Path for output vocals file
+        model: Demucs model to use
+        device: Device to use
+        cleanup: Remove intermediate files after extraction
+
+    Returns:
+        Path to extracted vocals file
+    """
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+
+    # Use temp directory for demucs output
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir = Path(temp_dir)
+
+        # Run separation
+        vocals_path = separate_vocals(input_path, temp_dir, model, device)
+
+        # Copy to final destination
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(vocals_path, output_path)
+
+    return output_path
+
+
+def check_demucs_available() -> bool:
+    """Check if Demucs is installed and available."""
+    try:
+        result = subprocess.run(
+            ["python", "-m", "demucs", "--help"],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
 
 
 def _get_noisereduce():
