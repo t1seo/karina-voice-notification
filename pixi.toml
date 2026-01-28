@@ -35,7 +35,8 @@ soundfile = ">=0.12.0"
 huggingface-hub = ">=0.20.0"
 
 # Utilities
-tqdm = ">=4.66.0"
+loguru = ">=0.7.0"
+rich = ">=13.0.0"
 
 [tasks]
 download = "python scripts/download_audio.py"
