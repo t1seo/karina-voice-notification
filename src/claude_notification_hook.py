@@ -8,8 +8,10 @@ Usage:
     2. Add to ~/.claude/settings.json hooks section
 """
 
+import glob
 import json
 import os
+import random
 import subprocess
 import sys
 from datetime import datetime
@@ -18,14 +20,8 @@ from pathlib import Path
 # Debug log file
 DEBUG_LOG = os.path.expanduser("~/.claude/hooks/hook_debug.log")
 
-# Sound files for notifications
+# Sound directory
 SOUND_DIR = os.path.expanduser("~/.claude/sounds")
-NOTIFICATION_SOUNDS = {
-    "permission_prompt": f"{SOUND_DIR}/permission_prompt_1.wav",
-    "idle_prompt": f"{SOUND_DIR}/idle_prompt_1.wav",
-    "auth_success": f"{SOUND_DIR}/auth_success_1.wav",
-    "elicitation_dialog": f"{SOUND_DIR}/elicitation_dialog_1.wav",
-}
 
 
 def debug_log(msg: str):
@@ -37,10 +33,19 @@ def debug_log(msg: str):
         pass
 
 
+def get_random_sound(notification_type: str):
+    """Get a random sound file for the given notification type."""
+    pattern = os.path.join(SOUND_DIR, f"{notification_type}_*.wav")
+    sound_files = glob.glob(pattern)
+    if sound_files:
+        return random.choice(sound_files)
+    return None
+
+
 def play_notification_sound(notification_type: str):
-    """Play sound for the given notification type."""
-    sound_file = NOTIFICATION_SOUNDS.get(notification_type)
-    if sound_file and os.path.exists(sound_file):
+    """Play a random sound for the given notification type."""
+    sound_file = get_random_sound(notification_type)
+    if sound_file:
         try:
             # Use nohup to ensure sound plays even after hook exits
             subprocess.Popen(
