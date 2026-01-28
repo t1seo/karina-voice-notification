@@ -17,7 +17,7 @@ cp output/*/*.wav ~/.claude/sounds/
 
 ```bash
 mkdir -p ~/.claude/hooks
-cp scripts/claude_notification_hook.py ~/.claude/hooks/
+cp src/claude_notification_hook.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/claude_notification_hook.py
 ```
 
@@ -63,7 +63,7 @@ chmod +x ~/.claude/hooks/claude_notification_hook.py
 
 ```bash
 # GPU 환경 필요
-pixi run python scripts/pipeline.py --skip-download
+pixi run python src/pipeline.py --skip-download
 ```
 
 ### 3. 새 음성 복사
@@ -84,10 +84,10 @@ cp output/*/*.wav ~/.claude/sounds/
 
 ```bash
 # 1. YouTube에서 음성 샘플 다운로드 및 생성
-pixi run python scripts/pipeline.py "https://youtube.com/watch?v=..."
+pixi run python src/pipeline.py "https://youtube.com/watch?v=..."
 
 # 2. 이미 다운로드된 샘플로 재생성
-pixi run python scripts/pipeline.py --skip-download
+pixi run python src/pipeline.py --skip-download
 ```
 
 ## 주의사항

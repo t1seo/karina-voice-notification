@@ -27,7 +27,7 @@ linux = { features = ["linux"], solve-group = "linux" }
 mac = { features = ["mac"], solve-group = "mac" }
 
 [tasks]
-pipeline = "python scripts/pipeline.py"
+pipeline = "python src/pipeline.py"
 install-deps = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar"
 install-deps-mac = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar mlx mlx-whisper"
 install-deps-linux = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar faster-whisper"

@@ -17,7 +17,7 @@ cp output/*/*.wav ~/.claude/sounds/
 
 ```bash
 mkdir -p ~/.claude/hooks
-cp scripts/claude_notification_hook.py ~/.claude/hooks/
+cp src/claude_notification_hook.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/claude_notification_hook.py
 ```
 
@@ -63,7 +63,7 @@ Add to the `hooks` section in `~/.claude/settings.json`:
 
 ```bash
 # GPU environment required
-pixi run python scripts/pipeline.py --skip-download
+pixi run python src/pipeline.py --skip-download
 ```
 
 ### 3. Copy New Audio
@@ -84,10 +84,10 @@ cp output/*/*.wav ~/.claude/sounds/
 
 ```bash
 # 1. Download voice sample from YouTube and generate
-pixi run python scripts/pipeline.py "https://youtube.com/watch?v=..."
+pixi run python src/pipeline.py "https://youtube.com/watch?v=..."
 
 # 2. Regenerate with existing sample
-pixi run python scripts/pipeline.py --skip-download
+pixi run python src/pipeline.py --skip-download
 ```
 
 ## Notes

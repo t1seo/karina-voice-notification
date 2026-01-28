@@ -47,13 +47,13 @@ pixi install -e mac
 
 ```bash
 # Linux
-pixi run -e linux python scripts/pipeline.py
+pixi run -e linux python src/pipeline.py
 
 # Mac
-pixi run -e mac python scripts/pipeline.py
+pixi run -e mac python src/pipeline.py
 
 # 이미 다운로드된 오디오 사용
-pixi run -e mac python scripts/pipeline.py --skip-download
+pixi run -e mac python src/pipeline.py --skip-download
 ```
 
 ## Pipeline Steps
@@ -97,7 +97,7 @@ cp output/*/*.wav ~/.claude/sounds/
 ```bash
 # hook 스크립트 복사
 mkdir -p ~/.claude/hooks
-cp scripts/claude_notification_hook.py ~/.claude/hooks/
+cp src/claude_notification_hook.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/claude_notification_hook.py
 ```
 
@@ -146,7 +146,7 @@ chmod +x ~/.claude/hooks/claude_notification_hook.py
 
 ### 4. Linux에서 사용
 
-`scripts/claude_notification_hook.py`의 `afplay` 명령어를 수정:
+`src/claude_notification_hook.py`의 `afplay` 명령어를 수정:
 
 ```python
 # macOS
@@ -180,7 +180,7 @@ subprocess.Popen(["paplay", sound_file], ...)
 문구 수정 후 파이프라인 재실행:
 
 ```bash
-pixi run python scripts/pipeline.py --skip-download
+pixi run python src/pipeline.py --skip-download
 ```
 
 ---
@@ -189,7 +189,7 @@ pixi run python scripts/pipeline.py --skip-download
 
 ```
 karina-tts-notification/
-├── scripts/
+├── src/
 │   ├── pipeline.py           # 메인 파이프라인
 │   ├── download_audio.py     # YouTube 다운로드
 │   ├── extract_segment.py    # 오디오 분할
@@ -199,7 +199,7 @@ karina-tts-notification/
 ├── assets/
 │   ├── raw/                  # 원본 오디오
 │   ├── clean/                # 정제된 오디오
-│   └── transcripts/          # 전사 결과
+│   └── transrc/          # 전사 결과
 ├── models/                   # TTS 모델 (자동 다운로드)
 ├── output/                   # 생성된 알림음
 ├── notification_lines.json   # 알림 문구 설정
