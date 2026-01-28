@@ -9,6 +9,9 @@ models/
 output/**/*.wav
 output/**/*.webm
 
+# Transcript files (generated, not tracked)
+output/**/*.json
+
 # Backup files
 backup/
 
