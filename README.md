@@ -13,85 +13,95 @@
   <img src="assets/karina.jpg" alt="Karina" width="800">
 </p>
 
-Generate Claude Code notification sounds with **aespa Karina's voice** using AI voice cloning technology.
+Generate Claude Code notification sounds with **any voice** using AI voice cloning technology.
 
-> **What is this?** Custom notification sounds that play when Claude Code needs your attention - permission requests, task completion, and more.
-
-> **Use Any Voice!** While this project defaults to Karina's voice, you can use **any YouTube video** as a voice source. Clone your favorite idol, voice actor, streamer, or even your own voice!
+> **Use Any Voice!** Clone your favorite idol, voice actor, streamer, or even your own voice from any YouTube video!
 
 ---
 
-## Quick Setup (Using Pre-generated Audio)
+## How It Works
 
-### 1. Copy Audio Files
+This project uses a **voice cloning pipeline** to generate custom notification sounds. Give it any YouTube video with clear vocals, and it will clone that voice to speak your notification phrases.
 
-```bash
-mkdir -p ~/.claude/sounds
-cp output/notifications/*/*.wav ~/.claude/sounds/
+### Pipeline Overview
+
+```
+YouTube Video → Audio Extraction → Voice Segment Selection → Transcription → Voice Cloning → Notification Sounds
 ```
 
-### 2. Install Hook Script
+| Step | What Happens | Why |
+|------|--------------|-----|
+| **1. Audio Download** | Extract audio from YouTube using yt-dlp | Get raw voice material from any source |
+| **2. Segment Split** | Split into 15-second clips at 30-second intervals | Find clean voice segments without music/noise |
+| **3. Segment Selection** | Interactive menu to pick the best clip | Human ear picks cleaner audio than algorithms |
+| **4. Transcription** | Convert speech to text using Whisper large-v3 | TTS needs reference text to match voice patterns |
+| **5. Voice Cloning** | Generate new speech using Qwen3-TTS 1.7B | Clone the voice to speak custom notification phrases |
 
-```bash
-mkdir -p ~/.claude/hooks
-cp src/claude_notification_hook.py ~/.claude/hooks/
-chmod +x ~/.claude/hooks/claude_notification_hook.py
-```
+### Voice Cloning Technology
 
-### 3. Configure Claude Code
+The pipeline uses **Qwen3-TTS 1.7B**, a state-of-the-art text-to-speech model that can clone voices from short audio samples. It analyzes the reference audio's:
+- Tone and pitch patterns
+- Speaking rhythm and pace
+- Voice characteristics and timbre
 
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/claude_notification_hook.py",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/claude_notification_hook.py",
-            "timeout": 10
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+Then generates new speech that sounds like the same person speaking your custom phrases.
 
 ---
 
-## Notification Types
+## Requirements
 
-| Type | When it plays |
-|------|---------------|
+### Linux (NVIDIA GPU)
+- NVIDIA GPU with CUDA support (A100 recommended)
+- CUDA 12.0+
+- [pixi](https://pixi.sh) package manager
+
+### macOS (Apple Silicon)
+- Mac with M1/M2/M3/M4 chip
+- 64GB RAM recommended (32GB minimum)
+- [pixi](https://pixi.sh) package manager
+
+---
+
+## Choosing a Good Voice Sample
+
+> **Critical**: Voice cloning quality depends entirely on your source audio.
+
+**Good sources** (clean, isolated vocals):
+- Interview clips
+- Solo speaking segments
+- Behind-the-scenes talking moments
+- Podcast recordings
+
+**Avoid** (will produce poor results):
+- Music videos
+- Clips with background music
+- Noisy environments
+- Multiple speakers
+
+The reference audio should be **5-15 seconds** of clear speech.
+
+---
+
+## Generated Notifications
+
+The pipeline generates notification sounds for Claude Code events:
+
+| Event | When it plays |
+|-------|---------------|
 | `permission_prompt` | Claude asks permission before risky commands |
 | `idle_prompt` | Task complete, waiting for response |
 | `auth_success` | Authentication successful |
 | `elicitation_dialog` | User input required |
-| Stop event | Claude response complete |
 
-Each notification type has 10 voice variations that play randomly.
+Each notification type generates **10 voice variations** that play randomly for variety.
 
 ---
 
 ## Customization
 
-### Change Notification Phrases
+### Custom Notification Phrases
 
-Edit `notification_lines.json`:
+Edit `notification_lines.json` to change what the cloned voice says:
 
 ```json
 {
@@ -103,47 +113,22 @@ Edit `notification_lines.json`:
 
 ---
 
-## Generating New Audio (GPU Required)
+## Claude Code Integration
 
-### Requirements
+After generating your notification sounds, copy them to Claude Code:
 
-**Linux (NVIDIA GPU)**
-- NVIDIA GPU with CUDA support (A100 recommended)
-- CUDA 12.0+
-- [pixi](https://pixi.sh) package manager
+```bash
+# Copy audio files
+mkdir -p ~/.claude/sounds
+cp output/notifications/*/*.wav ~/.claude/sounds/
 
-**macOS (Apple Silicon)**
-- Mac with M1/M2/M3/M4 chip
-- 64GB RAM recommended (32GB minimum)
-- [pixi](https://pixi.sh) package manager
+# Install hook script
+mkdir -p ~/.claude/hooks
+cp src/claude_notification_hook.py ~/.claude/hooks/
+chmod +x ~/.claude/hooks/claude_notification_hook.py
+```
 
-### Choosing a Good Voice Sample
-
-> **Important**: For best results, choose a YouTube video with **voice only** (no background music).
-
-**Good sources:**
-- Interview clips
-- Solo speaking segments
-- Behind-the-scenes talking moments
-
-**Avoid:**
-- Music videos
-- Clips with background music
-- Noisy environments
-
----
-
-## Troubleshooting
-
-### Hook not playing sounds
-- Check that audio files exist in `~/.claude/sounds/`
-- Verify the hook script has execute permissions
-- Check `~/.claude/hooks/hook_debug.log` for errors
-
-### Poor voice quality
-- Use a cleaner voice sample without background music
-- Ensure the reference audio is 5-15 seconds
-- Try a different segment from the source video
+Then add the hook configuration to `~/.claude/settings.json`. See [CLAUDE.md](CLAUDE.md) for detailed setup instructions.
 
 ---
 
@@ -152,14 +137,32 @@ Edit `notification_lines.json`:
 ```
 project-karina-voice/
 ├── src/
-│   ├── pipeline.py              # Main pipeline
-│   ├── claude_notification_hook.py # Claude hook
-│   └── ...
+│   ├── pipeline.py              # Main pipeline orchestrator
+│   ├── download_audio.py        # YouTube audio extraction
+│   ├── transcribe.py            # Whisper transcription
+│   ├── generate_notifications.py # Qwen3-TTS voice cloning
+│   └── claude_notification_hook.py # Claude Code hook
 ├── output/
-│   └── notifications/           # Generated sounds
-├── notification_lines.json      # Phrase configuration
+│   ├── raw/                     # Downloaded audio
+│   ├── clean/                   # Selected voice segments
+│   └── notifications/           # Generated notification sounds
+├── notification_lines.json      # Customizable phrases
 └── pixi.toml                    # Dependencies
 ```
+
+---
+
+## Troubleshooting
+
+### Poor voice quality
+- Use a cleaner voice sample without background music
+- Ensure the reference audio is 5-15 seconds
+- Try a different segment from the source video
+
+### Hook not playing sounds
+- Check that audio files exist in `~/.claude/sounds/`
+- Verify the hook script has execute permissions
+- Check `~/.claude/hooks/hook_debug.log` for errors
 
 ---
 
