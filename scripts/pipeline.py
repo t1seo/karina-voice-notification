@@ -15,7 +15,9 @@ import os
 from pathlib import Path
 
 import torch
+import numpy as np
 import soundfile as sf
+from scipy import signal
 from loguru import logger
 from rich.console import Console
 from rich.panel import Panel
@@ -285,6 +287,33 @@ def setup_tts_model():
     return local_dir
 
 
+def post_process_audio(audio: np.ndarray, sr: int, silence_ms: int = 300, speed: float = 0.67) -> tuple[np.ndarray, int]:
+    """Post-process audio: add silence at beginning and slow down.
+
+    Args:
+        audio: Audio waveform
+        sr: Sample rate
+        silence_ms: Silence to add at beginning (milliseconds)
+        speed: Speed factor (0.67 = 1.5x slower)
+
+    Returns:
+        Processed audio and sample rate
+    """
+    # Add silence at beginning
+    silence_samples = int(sr * silence_ms / 1000)
+    silence = np.zeros(silence_samples, dtype=audio.dtype)
+    audio_with_silence = np.concatenate([silence, audio])
+
+    # Slow down audio by resampling
+    if speed != 1.0:
+        # Resample to slow down (lower speed = longer audio)
+        num_samples = int(len(audio_with_silence) / speed)
+        audio_slowed = signal.resample(audio_with_silence, num_samples)
+        return audio_slowed.astype(np.float32), sr
+
+    return audio_with_silence, sr
+
+
 def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path):
     """Generate all notification voice lines using voice cloning."""
     console.print(Panel("[bold]Step 6: Generate Notification Voice Lines[/bold]", style="blue"))
@@ -346,7 +375,9 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
                     non_streaming_mode=True,
                 )
 
-                sf.write(str(output_path), wavs[0], sr)
+                # Post-process: add 300ms silence, slow down to 1.5x duration
+                processed_audio, sr = post_process_audio(wavs[0], sr, silence_ms=300, speed=0.67)
+                sf.write(str(output_path), processed_audio, sr)
                 progress.advance(task)
 
     logger.success(f"All notifications generated in: {OUTPUT_DIR}")
