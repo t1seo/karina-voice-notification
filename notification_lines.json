@@ -1,0 +1,34 @@
+{
+  "permission_prompt": [
+    {
+      "text": "오빠, 잠깐! 이거 해도 돼?",
+      "filename": "permission_prompt_1.wav"
+    },
+    {
+      "text": "허락이 필요해요~",
+      "filename": "permission_prompt_2.wav"
+    }
+  ],
+  "idle_prompt": [
+    {
+      "text": "오빠, 다 했어! 확인해줘~",
+      "filename": "idle_prompt_1.wav"
+    },
+    {
+      "text": "끝났어요, 봐주세요!",
+      "filename": "idle_prompt_2.wav"
+    }
+  ],
+  "auth_success": [
+    {
+      "text": "인증 완료! 고마워요~",
+      "filename": "auth_success_1.wav"
+    }
+  ],
+  "elicitation_dialog": [
+    {
+      "text": "여기 입력이 필요해요!",
+      "filename": "elicitation_dialog_1.wav"
+    }
+  ]
+}

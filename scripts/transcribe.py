@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-"""Transcribe audio using Lightning Whisper MLX (optimized for Apple Silicon)."""
+"""Transcribe audio using faster-whisper (GPU optimized)."""
 
 from pathlib import Path
 import json
 import sys
 
-from lightning_whisper_mlx import LightningWhisperMLX
+from faster_whisper import WhisperModel
 
 PROJECT_ROOT = Path(__file__).parent.parent
 ASSETS_DIR = PROJECT_ROOT / "assets"
 CLEAN_AUDIO_DIR = ASSETS_DIR / "clean"
 TRANSCRIPTS_DIR = ASSETS_DIR / "transcripts"
 
+
 def transcribe_audio(audio_path: Path, language: str = "ko") -> dict:
-    """Transcribe audio file using Lightning Whisper MLX.
+    """Transcribe audio file using faster-whisper on GPU.
 
     Args:
         audio_path: Path to audio file
@@ -24,11 +25,15 @@ def transcribe_audio(audio_path: Path, language: str = "ko") -> dict:
     """
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    print(f"Loading Whisper model (large-v3)...")
-    whisper = LightningWhisperMLX(model="large-v3", batch_size=12, quant=None)
+    print("Loading Whisper model (large-v3) on GPU...")
+    model = WhisperModel("large-v3", device="cuda", compute_type="float16")
 
     print(f"Transcribing: {audio_path}")
-    result = whisper.transcribe(str(audio_path), language=language)
+    segments, info = model.transcribe(str(audio_path), language=language)
+
+    text = " ".join([seg.text for seg in segments])
+
+    result = {"text": text, "language": info.language}
 
     # Save transcript
     output_path = TRANSCRIPTS_DIR / f"{audio_path.stem}_transcript.json"
@@ -36,9 +41,10 @@ def transcribe_audio(audio_path: Path, language: str = "ko") -> dict:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
     print(f"Transcript saved to: {output_path}")
-    print(f"\nTranscript:\n{result['text']}")
+    print(f"\nTranscript:\n{text}")
 
     return result
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
