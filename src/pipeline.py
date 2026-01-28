@@ -36,6 +36,132 @@ console = Console()
 logger.remove()
 logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>")
 
+# ============== Internationalization ==============
+
+LANG = "en"  # Default language
+
+TEXTS = {
+    "en": {
+        # Menu
+        "menu_footer": "↑↓ Navigate  •  Enter Select  •  q Quit",
+        "main_title": "Karina Voice Generator",
+        "main_subtitle": "Generate Claude Code notifications with aespa Karina's voice",
+        "menu_full": "🚀 Run Full Pipeline",
+        "menu_full_desc": "Download → Split → Transcribe → Generate TTS",
+        "menu_download": "📥 Download & Extract Audio",
+        "menu_download_desc": "Download from YouTube and split into segments",
+        "menu_transcribe": "📝 Start from Transcribe",
+        "menu_transcribe_desc": "Use existing audio → Transcribe → Generate TTS",
+        "menu_generate": "🎤 Generate Only",
+        "menu_generate_desc": "Use existing transcript to generate TTS",
+        "menu_exit": "❌ Exit",
+        "cancel": "❌ Cancel",
+        # Split mode
+        "split_title": "Split Mode",
+        "split_subtitle": "Choose how to split the audio",
+        "split_auto": "🔄 Auto Split",
+        "split_auto_desc": "Split at 30-second intervals",
+        "split_manual": "⏱️  Manual Input",
+        "split_manual_desc": "Enter start times manually",
+        # Segment selection
+        "segment_title": "Select Segment",
+        "segment_subtitle": "Choose a clean voice segment (preview with afplay)",
+        # Steps
+        "step_device": "Device Environment Check",
+        "step_download": "Step 1: Download Audio from YouTube",
+        "step_split": "Step 2: Split Audio into Segments",
+        "step_select": "Step 3: Select Clean Voice Segment",
+        "step_transcribe": "Step 4: Transcribe Audio",
+        "step_setup": "Step 5: Setup Qwen3-TTS 1.7B Model",
+        "step_generate": "Step 6: Generate Notification Voice Lines",
+        # Messages
+        "total_duration": "Total duration",
+        "enter_start_time": "Enter start time (seconds or MM:SS, empty to finish)",
+        "start_time_prompt": "Start time: ",
+        "invalid_format": "Invalid format. Example: 30, 1:30, 90.5",
+        "out_of_range": "Out of range",
+        "created_segments": "Created {n} segments",
+        "preview_tip": "💡 Tip: Preview with 'afplay <path>' (Mac) or 'aplay <path>' (Linux)",
+        "youtube_url_prompt": "YouTube URL (Enter for default): ",
+        "audio_ready": "✅ Audio Ready!",
+        "pipeline_complete": "✨ Pipeline Complete!",
+        "next_steps": "Next steps:",
+        "next_step_1": "1. Review generated audio files",
+        "next_step_2": "2. Copy best ones to ~/.claude/sounds/",
+        "next_step_3": "3. Configure Claude Code notification hooks",
+        "bye": "👋 Bye!",
+        "cancelled": "Cancelled",
+        "no_gpu_warning": "No GPU detected, using CPU (will be slow)",
+    },
+    "ko": {
+        # Menu
+        "menu_footer": "↑↓ 이동  •  Enter 선택  •  q 종료",
+        "main_title": "Karina Voice Generator",
+        "main_subtitle": "aespa 카리나 음성으로 Claude Code 알림음 생성",
+        "menu_full": "🚀 전체 파이프라인 실행",
+        "menu_full_desc": "다운로드 → 분할 → 전사 → TTS 생성",
+        "menu_download": "📥 음성 다운로드 & 추출",
+        "menu_download_desc": "YouTube에서 음성 다운로드 후 세그먼트 분할",
+        "menu_transcribe": "📝 전사(Transcribe)부터 시작",
+        "menu_transcribe_desc": "기존 오디오로 전사 → TTS 생성",
+        "menu_generate": "🎤 음성 생성만",
+        "menu_generate_desc": "기존 전사 결과로 TTS 음성만 생성",
+        "menu_exit": "❌ 종료",
+        "cancel": "❌ 취소",
+        # Split mode
+        "split_title": "분할 모드 선택",
+        "split_subtitle": "오디오 분할 방식을 선택하세요",
+        "split_auto": "🔄 자동 분할",
+        "split_auto_desc": "30초 간격으로 자동 분할",
+        "split_manual": "⏱️  수동 입력",
+        "split_manual_desc": "시작 시간을 직접 입력",
+        # Segment selection
+        "segment_title": "세그먼트 선택",
+        "segment_subtitle": "깨끗한 음성 구간을 선택하세요 (afplay로 미리듣기 가능)",
+        # Steps
+        "step_device": "Device Environment Check",
+        "step_download": "Step 1: Download Audio from YouTube",
+        "step_split": "Step 2: Split Audio into Segments",
+        "step_select": "Step 3: Select Clean Voice Segment",
+        "step_transcribe": "Step 4: Transcribe Audio",
+        "step_setup": "Step 5: Setup Qwen3-TTS 1.7B Model",
+        "step_generate": "Step 6: Generate Notification Voice Lines",
+        # Messages
+        "total_duration": "총 길이",
+        "enter_start_time": "시작 시간을 입력하세요 (초 또는 MM:SS 형식, 빈 입력시 종료)",
+        "start_time_prompt": "시작 시간: ",
+        "invalid_format": "잘못된 형식입니다. 예: 30, 1:30, 90.5",
+        "out_of_range": "범위를 벗어났습니다",
+        "created_segments": "{n}개의 세그먼트 생성됨",
+        "preview_tip": "💡 Tip: 터미널에서 'afplay <path>' (Mac) 또는 'aplay <path>' (Linux)로 미리듣기",
+        "youtube_url_prompt": "YouTube URL (Enter시 기본값 사용): ",
+        "audio_ready": "✅ 오디오 준비 완료!",
+        "pipeline_complete": "✨ 파이프라인 완료!",
+        "next_steps": "다음 단계:",
+        "next_step_1": "1. 생성된 오디오 파일 확인",
+        "next_step_2": "2. ~/.claude/sounds/에 복사",
+        "next_step_3": "3. Claude Code notification hook 설정",
+        "bye": "👋 안녕히 가세요!",
+        "cancelled": "취소됨",
+        "no_gpu_warning": "GPU가 감지되지 않았습니다. CPU 사용 (느림)",
+    },
+}
+
+
+def t(key: str, **kwargs) -> str:
+    """Get translated text for current language."""
+    text = TEXTS.get(LANG, TEXTS["en"]).get(key, TEXTS["en"].get(key, key))
+    if kwargs:
+        return text.format(**kwargs)
+    return text
+
+
+def set_language(lang: str):
+    """Set the current language."""
+    global LANG
+    LANG = lang
+
+
 # Project paths
 PROJECT_ROOT = Path(__file__).parent.parent
 OUTPUT_DIR = PROJECT_ROOT / "output"
@@ -94,7 +220,7 @@ class InteractiveMenu:
             if i < len(self.options) - 1:
                 menu_text.append("\n")
 
-        footer = Text("\n  ↑↓ 이동  •  Enter 선택  •  q 종료", style="dim")
+        footer = Text(f"\n  {t('menu_footer')}", style="dim")
         menu_text.append(footer)
 
         return Panel(
@@ -124,19 +250,38 @@ class InteractiveMenu:
                 live.update(self._render())
 
 
-def show_main_menu() -> str | None:
-    """Show main menu and return selected action."""
+def show_language_menu() -> str:
+    """Show language selection menu."""
     options = [
-        {"label": "🚀 전체 파이프라인 실행", "desc": "다운로드 → 분할 → 전사 → TTS 생성", "action": "full"},
-        {"label": "📥 음성 다운로드 & 추출", "desc": "YouTube에서 음성 다운로드 후 세그먼트 분할", "action": "download"},
-        {"label": "📝 전사(Transcribe)부터 시작", "desc": "기존 오디오로 전사 → TTS 생성", "action": "transcribe"},
-        {"label": "🎤 음성 생성만", "desc": "기존 전사 결과로 TTS 음성만 생성", "action": "generate"},
-        {"label": "❌ 종료", "desc": "", "action": "exit"},
+        {"label": "🇺🇸 English", "desc": ""},
+        {"label": "🇰🇷 한국어", "desc": ""},
     ]
 
     menu = InteractiveMenu(
-        title="Karina Voice Generator",
-        subtitle="aespa 카리나 음성으로 Claude Code 알림음 생성",
+        title="Language / 언어",
+        subtitle="Select your language / 언어를 선택하세요",
+        options=options
+    )
+
+    result = menu.run()
+    if result is None or result == 0:
+        return "en"
+    return "ko"
+
+
+def show_main_menu() -> str | None:
+    """Show main menu and return selected action."""
+    options = [
+        {"label": t("menu_full"), "desc": t("menu_full_desc"), "action": "full"},
+        {"label": t("menu_download"), "desc": t("menu_download_desc"), "action": "download"},
+        {"label": t("menu_transcribe"), "desc": t("menu_transcribe_desc"), "action": "transcribe"},
+        {"label": t("menu_generate"), "desc": t("menu_generate_desc"), "action": "generate"},
+        {"label": t("menu_exit"), "desc": "", "action": "exit"},
+    ]
+
+    menu = InteractiveMenu(
+        title=t("main_title"),
+        subtitle=t("main_subtitle"),
         options=options
     )
 
@@ -149,11 +294,11 @@ def show_main_menu() -> str | None:
 def show_segment_menu(segments: list[Path]) -> int | None:
     """Show segment selection menu."""
     options = [{"label": f"🎵 {seg.name}", "desc": ""} for seg in segments]
-    options.append({"label": "❌ 취소", "desc": ""})
+    options.append({"label": t("cancel"), "desc": ""})
 
     menu = InteractiveMenu(
-        title="세그먼트 선택",
-        subtitle="깨끗한 음성 구간을 선택하세요 (afplay로 미리듣기 가능)",
+        title=t("segment_title"),
+        subtitle=t("segment_subtitle"),
         options=options
     )
 
@@ -166,14 +311,14 @@ def show_segment_menu(segments: list[Path]) -> int | None:
 def show_split_mode_menu() -> str | None:
     """Show split mode selection menu."""
     options = [
-        {"label": "🔄 자동 분할", "desc": "30초 간격으로 자동 분할"},
-        {"label": "⏱️  수동 입력", "desc": "시작 시간을 직접 입력"},
-        {"label": "❌ 취소", "desc": ""},
+        {"label": t("split_auto"), "desc": t("split_auto_desc")},
+        {"label": t("split_manual"), "desc": t("split_manual_desc")},
+        {"label": t("cancel"), "desc": ""},
     ]
 
     menu = InteractiveMenu(
-        title="분할 모드 선택",
-        subtitle="오디오 분할 방식을 선택하세요",
+        title=t("split_title"),
+        subtitle=t("split_subtitle"),
         options=options
     )
 
@@ -267,22 +412,22 @@ def split_audio(input_file: Path, segment_duration: int = 15) -> list[Path]:
 
     if mode == "manual":
         # Manual mode: user inputs start times
-        console.print(f"\n[cyan]총 길이: {total_duration:.1f}초[/cyan]")
-        console.print("[dim]시작 시간을 입력하세요 (초 또는 MM:SS 형식, 빈 입력시 종료)[/dim]\n")
+        console.print(f"\n[cyan]{t('total_duration')}: {total_duration:.1f}s[/cyan]")
+        console.print(f"[dim]{t('enter_start_time')}[/dim]\n")
 
         while True:
             try:
-                time_input = console.input("[bold green]시작 시간: [/bold green]")
+                time_input = console.input(f"[bold green]{t('start_time_prompt')}[/bold green]")
                 if not time_input.strip():
                     break
 
                 start_sec = parse_time_input(time_input)
                 if start_sec is None:
-                    console.print("[red]잘못된 형식입니다. 예: 30, 1:30, 90.5[/red]")
+                    console.print(f"[red]{t('invalid_format')}[/red]")
                     continue
 
                 if start_sec < 0 or start_sec >= total_duration:
-                    console.print(f"[red]범위를 벗어났습니다 (0 ~ {total_duration:.1f}초)[/red]")
+                    console.print(f"[red]{t('out_of_range')} (0 ~ {total_duration:.1f}s)[/red]")
                     continue
 
                 start_ms = int(start_sec * 1000)
@@ -344,7 +489,7 @@ def select_segment(segments: list[Path]) -> Path | None:
     for i, seg in enumerate(segments):
         table.add_row(str(i), seg.name)
     console.print(table)
-    console.print("\n[dim]💡 Tip: 터미널에서 'afplay <path>' (Mac) 또는 'aplay <path>' (Linux)로 미리듣기[/dim]\n")
+    console.print(f"\n[dim]{t('preview_tip')}[/dim]\n")
 
     # Interactive selection
     idx = show_segment_menu(segments)
@@ -497,12 +642,12 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
 def show_completion():
     """Show completion message."""
     console.print(Panel.fit(
-        "[bold green]✨ Pipeline Complete![/bold green]\n\n"
+        f"[bold green]{t('pipeline_complete')}[/bold green]\n\n"
         f"Generated notifications are in: [cyan]{NOTIFICATIONS_DIR}[/cyan]\n\n"
-        "[dim]Next steps:[/dim]\n"
-        "1. Review generated audio files\n"
-        "2. Copy best ones to ~/.claude/sounds/\n"
-        "3. Configure Claude Code notification hooks",
+        f"[dim]{t('next_steps')}[/dim]\n"
+        f"{t('next_step_1')}\n"
+        f"{t('next_step_2')}\n"
+        f"{t('next_step_3')}",
         border_style="green"
     ))
 
@@ -532,7 +677,7 @@ def run_download_only(url: str):
     segments = split_audio(audio_file)
     selected = select_segment(segments)
     if selected:
-        console.print(Panel.fit(f"[bold green]✅ 오디오 준비 완료![/bold green]\n\nSelected: [cyan]{selected}[/cyan]", border_style="green"))
+        console.print(Panel.fit(f"[bold green]{t('audio_ready')}[/bold green]\n\nSelected: [cyan]{selected}[/cyan]", border_style="green"))
 
 
 def run_from_transcribe(device_info: DeviceInfo):
@@ -584,6 +729,7 @@ def main():
     parser.add_argument("url", nargs="?", default=DEFAULT_YOUTUBE_URL, help="YouTube URL")
     parser.add_argument("--skip-download", action="store_true", help="Skip download, use existing audio")
     parser.add_argument("--no-menu", action="store_true", help="Skip menu, run full pipeline")
+    parser.add_argument("--lang", choices=["en", "ko"], default=None, help="Language (en/ko)")
     args = parser.parse_args()
 
     # Show banner
@@ -592,6 +738,14 @@ def main():
         "[dim]Cross-platform (CUDA / MPS / CPU)[/dim]",
         border_style="magenta"
     ))
+    console.print()
+
+    # Language selection
+    if args.lang:
+        set_language(args.lang)
+    else:
+        lang = show_language_menu()
+        set_language(lang)
     console.print()
 
     # Check device
@@ -610,13 +764,13 @@ def main():
         action = show_main_menu()
 
         if action is None or action == "exit":
-            console.print("\n[dim]👋 Bye![/dim]")
+            console.print(f"\n[dim]{t('bye')}[/dim]")
             break
         elif action == "full":
-            url = console.input("\n[bold yellow]YouTube URL[/bold yellow] (Enter for default): ").strip() or args.url
+            url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] ({t('youtube_url_prompt')}): ").strip() or args.url
             run_full_pipeline(url, device_info)
         elif action == "download":
-            url = console.input("\n[bold yellow]YouTube URL[/bold yellow] (Enter for default): ").strip() or args.url
+            url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] ({t('youtube_url_prompt')}): ").strip() or args.url
             run_download_only(url)
         elif action == "transcribe":
             run_from_transcribe(device_info)
