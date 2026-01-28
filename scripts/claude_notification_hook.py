@@ -2,7 +2,6 @@
 """Claude Code notification hook with sound playback.
 
 This script plays Karina voice notifications for Claude Code events.
-Optionally integrates with Slack for notifications.
 
 Usage:
     1. Copy to ~/.claude/hooks/claude_notification_hook.py

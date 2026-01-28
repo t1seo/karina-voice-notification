@@ -151,19 +151,6 @@ subprocess.Popen(["aplay", sound_file], ...)
 subprocess.Popen(["paplay", sound_file], ...)
 ```
 
-### 5. Slack 연동 (선택)
-
-Slack 알림도 함께 받으려면 `~/.claude/settings.json`의 `env` 섹션에 추가:
-
-```json
-{
-  "env": {
-    "SLACK_BOT_TOKEN": "xoxb-your-token",
-    "SLACK_CHANNEL_ID": "C0123456789"
-  }
-}
-```
-
 ---
 
 ## 알림 메시지 커스터마이징
