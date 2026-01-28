@@ -34,6 +34,7 @@ scipy = ">=1.10.0"
 loguru = ">=0.7.0"
 rich = ">=13.0.0"
 qwen-tts = "*"
+readchar = ">=4.0.0"
 
 [feature.linux.pypi-dependencies]
 # Linux: faster-whisper for GPU
