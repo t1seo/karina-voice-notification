@@ -46,9 +46,9 @@ mlx = ">=0.5.0"
 mlx-whisper = ">=0.4.0"
 
 [environments]
-default = { features = ["linux"], platforms = ["linux-64"] }
-linux = { features = ["linux"], platforms = ["linux-64"] }
-mac = { features = ["mac"], platforms = ["osx-arm64"] }
+default = { solve-group = "default" }
+linux = { features = ["linux"], solve-group = "default" }
+mac = { features = ["mac"], solve-group = "default" }
 
 [tasks]
 pipeline = "python scripts/pipeline.py"
