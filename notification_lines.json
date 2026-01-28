@@ -11,7 +11,7 @@
   ],
   "idle_prompt": [
     {
-      "text": "다 끝났어요! 결과 확인해주시면 감사하겠습니다~",
+      "text": "다 끝났어요! 결과 한번 확인해주세요~",
       "filename": "idle_prompt_1.wav"
     },
     {

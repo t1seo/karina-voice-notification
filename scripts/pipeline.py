@@ -45,7 +45,7 @@ NOTIFICATION_LINES = {
         {"text": "잠시만요, 이 작업을 하려면 허락이 필요해요~", "filename": "permission_prompt_2.wav"},
     ],
     "idle_prompt": [
-        {"text": "다 끝났어요! 결과 확인해주시면 감사하겠습니다~", "filename": "idle_prompt_1.wav"},
+        {"text": "다 끝났어요! 결과 한번 확인해주세요~", "filename": "idle_prompt_1.wav"},
         {"text": "작업이 완료되었어요, 한번 봐주시겠어요?", "filename": "idle_prompt_2.wav"},
     ],
     "auth_success": [
