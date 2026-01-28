@@ -28,6 +28,14 @@ mac = { features = ["mac"], solve-group = "mac" }
 
 [tasks]
 pipeline = "python src/pipeline.py"
-install-deps = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar"
-install-deps-mac = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar mlx mlx-whisper"
-install-deps-linux = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar faster-whisper"
+install-deps = "pip install numpy pydub torch torchaudio soundfile huggingface-hub scipy loguru rich qwen-tts readchar transformers tqdm noisereduce pedalboard pyloudnorm demucs torchcodec"
+install-deps-mac = "pip install numpy pydub torch torchaudio soundfile huggingface-hub scipy loguru rich qwen-tts readchar mlx mlx-whisper transformers tqdm noisereduce pedalboard pyloudnorm demucs torchcodec"
+install-deps-linux = "pip install numpy pydub torch torchaudio soundfile huggingface-hub scipy loguru rich qwen-tts readchar faster-whisper transformers tqdm noisereduce pedalboard pyloudnorm demucs torchcodec"
+post-process = "python src/post_process.py"
+separate-vocals = "python -m demucs --two-stems vocals"
+lint = "ruff check src/"
+lint-fix = "ruff check --fix src/"
+format = "ruff format src/"
+format-check = "ruff format --check src/"
+install-dev = "pip install pre-commit ruff"
+pre-commit-install = "pre-commit install"

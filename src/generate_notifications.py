@@ -3,15 +3,19 @@
 
 import json
 import warnings
-import torch
-import soundfile as sf
-import transformers
 from pathlib import Path
+
+import soundfile as sf
+import torch
+import transformers
 from tqdm import tqdm
 
 # Suppress transformers warnings
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore", message=".*pad_token_id.*")
+
+# Post-processing flag
+ENABLE_POST_PROCESSING = True
 
 PROJECT_ROOT = Path(__file__).parent.parent
 ASSETS_DIR = PROJECT_ROOT / "assets"
@@ -41,19 +45,37 @@ def generate_cloned_voice(
     text: str,
     ref_audio_path: Path,
     ref_text: str,
-    output_path: Path
+    output_path: Path,
+    post_process: bool = True,
+    language: str = "korean",
 ):
     """Generate speech with cloned voice."""
     wavs, sr = model.generate_voice_clone(
         text=text,
         ref_audio=str(ref_audio_path),
         ref_text=ref_text,
-        language="korean",
+        language=language,
         non_streaming_mode=True,
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     sf.write(str(output_path), wavs[0], sr)
+
+    # Apply post-processing if enabled
+    if post_process and ENABLE_POST_PROCESSING:
+        try:
+            from post_process import post_process_file
+
+            post_process_file(
+                output_path,
+                denoise=True,
+                eq=True,
+                dynamics=True,
+                loudness_normalize=True,
+                target_lufs=-14.0,
+            )
+        except ImportError:
+            pass  # Post-processing dependencies not installed
 
     return output_path
 
@@ -63,7 +85,7 @@ def generate_all_notifications(ref_audio_path: Path, ref_text: str):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Load notification lines
-    with open(NOTIFICATION_LINES_FILE, "r", encoding="utf-8") as f:
+    with open(NOTIFICATION_LINES_FILE, encoding="utf-8") as f:
         notification_lines = json.load(f)
 
     # Load model
@@ -86,7 +108,7 @@ def generate_all_notifications(ref_audio_path: Path, ref_text: str):
                     text=line["text"],
                     ref_audio_path=ref_audio_path,
                     ref_text=ref_text,
-                    output_path=output_path
+                    output_path=output_path,
                 )
                 print(f"Saved: {output_path}")
                 pbar.update(1)
@@ -110,7 +132,7 @@ if __name__ == "__main__":
         print(f"Error: Transcript not found: {transcript_file}")
         sys.exit(1)
 
-    with open(transcript_file, "r", encoding="utf-8") as f:
+    with open(transcript_file, encoding="utf-8") as f:
         transcript_data = json.load(f)
     ref_text = transcript_data["text"]
 

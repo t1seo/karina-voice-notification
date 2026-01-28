@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Transcribe audio using faster-whisper (GPU optimized)."""
 
-from pathlib import Path
 import json
 import sys
+from pathlib import Path
 
 from faster_whisper import WhisperModel
 
@@ -47,10 +47,7 @@ def transcribe_audio(audio_path: Path, language: str = "ko") -> dict:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        audio_path = CLEAN_AUDIO_DIR / "karina_clean.wav"
-    else:
-        audio_path = Path(sys.argv[1])
+    audio_path = CLEAN_AUDIO_DIR / "karina_clean.wav" if len(sys.argv) < 2 else Path(sys.argv[1])
 
     language = sys.argv[2] if len(sys.argv) > 2 else "ko"
     transcribe_audio(audio_path, language)

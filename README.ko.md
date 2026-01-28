@@ -19,32 +19,67 @@ AI 음성 복제 기술을 사용하여 **어떤 목소리로든** Claude Code �
 
 ---
 
-## 작동 원리
+## 주요 기능
 
-이 프로젝트는 **음성 복제 파이프라인**을 사용하여 커스텀 알림음을 생성합니다. 깨끗한 음성이 담긴 YouTube 영상을 주면, 해당 목소리를 복제하여 알림 문구를 말하게 합니다.
+- **음성 복제** - Qwen3-TTS 1.7B를 사용하여 YouTube 영상에서 목소리 복제
+- **BGM 제거 (권장)** - Demucs AI로 배경음악에서 보컬 자동 분리
+- **오디오 정규화** - 클리핑 방지를 위한 자동 오디오 정규화
+- **오디오 후처리** - 선택적 오디오 향상 (노이즈 제거, EQ, 컴프레서, 음량 정규화)
+- **다국어 지원** - TTS 10개 언어 지원 (한국어, 영어, 중국어, 일본어 등)
+- **인터랙티브 메뉴** - 키보드로 쉽게 조작하는 메뉴 시스템
+- **출력 정리** - 새 파이프라인 시작 시 이전 출력 삭제 옵션
+- **코드 품질** - Pre-commit hooks와 ruff 린터/포맷터
+
+---
+
+## 작동 원리
 
 ### 파이프라인 개요
 
 ```
-YouTube 영상 → 오디오 추출 → 음성 구간 선택 → 전사 → 음성 복제 → 알림음
+YouTube 영상
+     ↓
+오디오 다운로드 (yt-dlp)
+     ↓
+[선택] BGM 제거 (Demucs AI)
+     ↓
+세그먼트 분할 (15초 클립)
+     ↓
+세그먼트 선택 (인터랙티브)
+     ↓
+전사 (Whisper large-v3)
+     ↓
+음성 복제 (Qwen3-TTS 1.7B)
+     ↓
+[선택] 후처리
+     ↓
+알림음
 ```
 
-| 단계 | 수행 작업 | 이유 |
+| 단계 | 수행 작업 | 기술 |
 |------|----------|------|
-| **1. 오디오 다운로드** | yt-dlp로 YouTube에서 오디오 추출 | 어떤 소스에서든 원본 음성 확보 |
-| **2. 세그먼트 분할** | 30초 간격으로 15초 클립 생성 | 음악/노이즈 없는 깨끗한 구간 찾기 |
-| **3. 세그먼트 선택** | 인터랙티브 메뉴로 최적 클립 선택 | 사람 귀가 알고리즘보다 깨끗한 오디오를 잘 구분함 |
-| **4. 전사** | Whisper large-v3로 음성을 텍스트로 변환 | TTS가 음성 패턴을 매칭하려면 참조 텍스트 필요 |
-| **5. 음성 복제** | Qwen3-TTS 1.7B로 새 음성 생성 | 목소리를 복제하여 커스텀 알림 문구를 말하게 함 |
+| **오디오 다운로드** | YouTube에서 오디오 추출 | yt-dlp |
+| **BGM 제거** | 배경음악에서 보컬 분리 | Demucs (Meta AI) |
+| **세그먼트 분할** | 15초 클립으로 분할 | pydub |
+| **전사** | 음성을 텍스트로 변환 | Whisper large-v3 |
+| **음성 복제** | 복제된 목소리로 새 음성 생성 | Qwen3-TTS 1.7B |
+| **후처리** | 오디오 품질 향상 | noisereduce, pedalboard, pyloudnorm |
 
-### 음성 복제 기술
+### 후처리 파이프라인
 
-파이프라인은 짧은 오디오 샘플에서 목소리를 복제할 수 있는 최신 TTS 모델 **Qwen3-TTS 1.7B**를 사용합니다. 참조 오디오의 다음 요소를 분석합니다:
-- 톤과 피치 패턴
-- 말하는 리듬과 속도
-- 목소리 특성과 음색
-
-그런 다음 같은 사람이 커스텀 문구를 말하는 것처럼 들리는 새 음성을 생성합니다.
+```
+Raw TTS 출력
+     ↓
+노이즈 제거 (spectral gating)
+     ↓
+보이스 EQ (80Hz 하이패스, 12kHz 로우패스)
+     ↓
+다이내믹스 (컴프레서 + 리미터)
+     ↓
+음량 정규화 (-14 LUFS)
+     ↓
+최종 출력
+```
 
 ---
 
@@ -62,6 +97,45 @@ YouTube 영상 → 오디오 추출 → 음성 구간 선택 → 전사 → 음�
 
 ---
 
+## 빠른 시작
+
+```bash
+# 저장소 클론
+git clone https://github.com/your-repo/project-karina-voice.git
+cd project-karina-voice
+
+# 의존성 설치
+pixi install
+pixi run install-deps-mac    # macOS
+pixi run install-deps-linux  # Linux
+
+# 파이프라인 실행
+pixi run pipeline
+```
+
+---
+
+## 지원 언어
+
+### TTS (음성 생성)
+| 언어 | 코드 |
+|------|------|
+| 한국어 | korean |
+| 영어 | english |
+| 중국어 | chinese |
+| 일본어 | japanese |
+| 프랑스어 | french |
+| 독일어 | german |
+| 스페인어 | spanish |
+| 이탈리아어 | italian |
+| 포르투갈어 | portuguese |
+| 러시아어 | russian |
+
+### 전사 (Whisper)
+위의 모든 언어를 자동 감지 또는 수동 선택으로 지원합니다.
+
+---
+
 ## 좋은 음성 샘플 선택하기
 
 > **중요**: 음성 복제 품질은 전적으로 소스 오디오에 달려 있습니다.
@@ -73,8 +147,7 @@ YouTube 영상 → 오디오 추출 → 음성 구간 선택 → 전사 → 음�
 - 팟캐스트 녹음
 
 **피해야 할 것** (품질 저하 원인):
-- 뮤직비디오
-- 배경음악이 있는 클립
+- 뮤직비디오 (BGM 제거 옵션 사용)
 - 시끄러운 환경
 - 여러 명이 말하는 영상
 
@@ -86,14 +159,12 @@ YouTube 영상 → 오디오 추출 → 음성 구간 선택 → 전사 → 음�
 
 파이프라인은 Claude Code 이벤트에 대한 알림음을 생성합니다:
 
-| 이벤트 | 재생 시점 |
-|--------|----------|
-| `permission_prompt` | Claude가 위험한 명령 실행 전 허락을 구할 때 |
-| `idle_prompt` | 작업 완료 후 대기 중일 때 |
-| `auth_success` | 인증 성공 시 |
-| `elicitation_dialog` | 사용자 입력이 필요할 때 |
-
-각 알림 유형마다 **10개의 음성 변형**이 생성되어 랜덤으로 재생됩니다.
+| 이벤트 | 재생 시점 | 변형 개수 |
+|--------|----------|-----------|
+| `permission_prompt` | Claude가 위험한 명령 실행 전 허락을 구할 때 | 10 |
+| `idle_prompt` | 작업 완료 후 대기 중일 때 | 20 |
+| `auth_success` | 인증 성공 시 | 10 |
+| `elicitation_dialog` | 사용자 입력이 필요할 때 | 10 |
 
 ---
 
@@ -111,6 +182,14 @@ YouTube 영상 → 오디오 추출 → 음성 구간 선택 → 전사 → 음�
 }
 ```
 
+### 후처리 설정
+
+`src/post_process.py`에서 조정:
+- `target_lufs`: 목표 음량 (-14 LUFS 기본값, 스트리밍 표준)
+- `denoise_strength`: 노이즈 제거 강도 (0.0-1.0)
+- `highpass_freq`: 저음 럼블 제거 (80Hz 기본값)
+- `lowpass_freq`: 고주파 노이즈 제거 (12kHz 기본값)
+
 ---
 
 ## Claude Code 연동
@@ -124,30 +203,27 @@ cp output/notifications/*/*.wav ~/.claude/sounds/
 
 # Hook 스크립트 설치
 mkdir -p ~/.claude/hooks
-cp src/claude_notification_hook.py ~/.claude/hooks/
+cp .claude/skills/setup-notifications/scripts/claude_notification_hook.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/claude_notification_hook.py
 ```
 
-그런 다음 `~/.claude/settings.json`에 hook 설정을 추가합니다. 자세한 설정 방법은 [CLAUDE.md](CLAUDE.md)를 참조하세요.
+그런 다음 `~/.claude/settings.json`에 hook 설정을 추가합니다:
 
----
-
-## 프로젝트 구조
-
-```
-project-karina-voice/
-├── src/
-│   ├── pipeline.py              # 메인 파이프라인 오케스트레이터
-│   ├── download_audio.py        # YouTube 오디오 추출
-│   ├── transcribe.py            # Whisper 전사
-│   ├── generate_notifications.py # Qwen3-TTS 음성 복제
-│   └── claude_notification_hook.py # Claude Code 훅
-├── output/
-│   ├── raw/                     # 다운로드된 오디오
-│   ├── clean/                   # 선택된 음성 세그먼트
-│   └── notifications/           # 생성된 알림음
-├── notification_lines.json      # 커스터마이징 가능한 문구
-└── pixi.toml                    # 의존성
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/claude_notification_hook.py", "timeout": 10}]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/claude_notification_hook.py", "timeout": 10}]
+      }
+    ]
+  }
+}
 ```
 
 ---
@@ -156,8 +232,16 @@ project-karina-voice/
 
 ### 음성 품질이 안 좋아요
 - 배경음악 없는 깨끗한 음성 샘플 사용
-- 레퍼런스 오디오가 5-15초인지 확인
-- 원본 영상에서 다른 구간 시도
+- 파이프라인 메뉴에서 BGM 제거 (Demucs) 활성화
+- 참조 오디오가 5-15초인지 확인
+- 후처리를 활성화하여 출력 품질 향상
+
+### 후처리가 작동 안 해요
+```bash
+# 올바른 pixi 환경에 의존성 설치
+pixi run -e mac pip install noisereduce pedalboard pyloudnorm  # macOS
+pixi run -e linux pip install noisereduce pedalboard pyloudnorm  # Linux
+```
 
 ### Hook에서 소리가 안 나요
 - `~/.claude/sounds/`에 오디오 파일이 있는지 확인

@@ -15,7 +15,6 @@ import random
 import subprocess
 import sys
 from datetime import datetime
-from pathlib import Path
 
 # Debug log file
 DEBUG_LOG = os.path.expanduser("~/.claude/hooks/hook_debug.log")
@@ -53,7 +52,7 @@ def play_notification_sound(notification_type: str):
                 shell=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                start_new_session=True
+                start_new_session=True,
             )
             debug_log(f"Playing sound for {notification_type}: {sound_file}")
         except Exception as e:

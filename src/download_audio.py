@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 ASSETS_DIR = PROJECT_ROOT / "assets"
 RAW_AUDIO_DIR = ASSETS_DIR / "raw"
 
+
 def download_audio(url: str, output_name: str = "karina_sample") -> Path:
     """Download audio from YouTube in best quality.
 
@@ -26,10 +27,13 @@ def download_audio(url: str, output_name: str = "karina_sample") -> Path:
     cmd = [
         "yt-dlp",
         "-x",  # Extract audio
-        "--audio-format", "wav",  # WAV format for best quality
-        "--audio-quality", "0",  # Best quality
-        "-o", str(output_path),
-        url
+        "--audio-format",
+        "wav",  # WAV format for best quality
+        "--audio-quality",
+        "0",  # Best quality
+        "-o",
+        str(output_path),
+        url,
     ]
 
     print(f"Downloading audio from: {url}")
@@ -41,6 +45,7 @@ def download_audio(url: str, output_name: str = "karina_sample") -> Path:
         print(f"Downloaded: {downloaded[0]}")
         return downloaded[0]
     raise FileNotFoundError("Download failed")
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

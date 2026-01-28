@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Setup and test Qwen3-TTS 1.7B model for GPU (A100)."""
 
-import torch
 from pathlib import Path
+
+import torch
 
 PROJECT_ROOT = Path(__file__).parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -17,7 +18,7 @@ def check_gpu():
         return False
 
     gpu_count = torch.cuda.device_count()
-    print(f"CUDA available: True")
+    print("CUDA available: True")
     print(f"GPU count: {gpu_count}")
 
     for i in range(gpu_count):
@@ -57,9 +58,10 @@ def download_model():
 
 def test_model():
     """Test the TTS model with voice cloning on GPU."""
-    from qwen_tts import Qwen3TTSModel
-    import soundfile as sf
     import json
+
+    import soundfile as sf
+    from qwen_tts import Qwen3TTSModel
 
     model_path = MODELS_DIR / "Qwen3-TTS-12Hz-1.7B-Base"
     ref_audio = PROJECT_ROOT / "assets" / "clean" / "karina_clean.wav"
@@ -77,7 +79,7 @@ def test_model():
         return False
 
     # Load transcript
-    with open(transcript_file, "r", encoding="utf-8") as f:
+    with open(transcript_file, encoding="utf-8") as f:
         transcript_data = json.load(f)
     ref_text = transcript_data["text"]
 

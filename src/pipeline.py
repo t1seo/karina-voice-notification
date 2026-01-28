@@ -8,39 +8,44 @@ Usage:
 """
 
 import argparse
+import json
+import shutil
 import subprocess
 import sys
-import json
-import os
-import shutil
 from pathlib import Path
 
-import torch
-import numpy as np
-import soundfile as sf
-from loguru import logger
-from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
-from rich.table import Table
-from rich.text import Text
-from rich.live import Live
-from rich.align import Align
-from rich import box
-import readchar
-
-from device_utils import detect_device, print_device_info, DeviceType, DeviceInfo
+# Ensure src/ directory is in Python path for local imports
+_src_dir = Path(__file__).parent.resolve()
+if str(_src_dir) not in sys.path:
+    sys.path.insert(0, str(_src_dir))
 
 # Suppress transformers warnings
 import warnings
+
+import numpy as np
+import readchar
+import soundfile as sf
+import torch
 import transformers
+from loguru import logger
+from rich import box
+from rich.align import Align
+from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
+from rich.table import Table
+from rich.text import Text
+
+from device_utils import DeviceInfo, DeviceType, detect_device, print_device_info
+
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore", message=".*pad_token_id.*")
 
 # Setup
 console = Console()
 logger.remove()
-logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>")
+logger.add(sys.stderr, format="<level>{level: <7}</level> | {message}")
 
 # ============== Internationalization ==============
 
@@ -53,15 +58,42 @@ TEXTS = {
         "main_title": "Karina Voice Generator",
         "main_subtitle": "Generate Claude Code notifications with aespa Karina's voice",
         "menu_full": "🚀 Run Full Pipeline",
-        "menu_full_desc": "Download → Split → Transcribe → Generate TTS",
+        "menu_full_desc": "Download → [BGM Remove] → Split → Transcribe → [Post-process] → TTS",
         "menu_download": "📥 Download & Extract Audio",
-        "menu_download_desc": "Download from YouTube and split into segments",
+        "menu_download_desc": "Download → [BGM Remove] → Split → Select segment",
         "menu_transcribe": "📝 Start from Transcribe",
-        "menu_transcribe_desc": "Use existing audio → Transcribe → Generate TTS",
+        "menu_transcribe_desc": "Existing audio → Transcribe → [Post-process] → TTS",
         "menu_generate": "🎤 Generate Only",
-        "menu_generate_desc": "Use existing transcript to generate TTS",
+        "menu_generate_desc": "Existing transcript → [Post-process] → TTS",
+        "menu_postprocess": "🔊 Post-process Only",
+        "menu_postprocess_desc": "Enhance existing audio (denoise, EQ, normalize)",
         "menu_exit": "❌ Exit",
         "cancel": "❌ Cancel",
+        # Post-processing
+        "postprocess_title": "Post-processing",
+        "postprocess_subtitle": "⚠️  Warning: May degrade voice quality. Skip recommended.",
+        "postprocess_enable": "✅ Enable Post-processing",
+        "postprocess_enable_desc": "Apply denoise, EQ, dynamics (may lose voice characteristics)",
+        "postprocess_disable": "⏭️  Skip Post-processing (Recommended)",
+        "postprocess_disable_desc": "Keep original TTS output - better voice quality",
+        "postprocess_complete": "✨ Post-processing Complete!",
+        "postprocess_files": "Processed {n} files",
+        # Source separation
+        "separate_title": "Source Separation",
+        "separate_subtitle": "⚠️  Warning: BGM in reference audio degrades voice cloning quality",
+        "separate_enable": "🎵 Enable BGM Removal (Recommended)",
+        "separate_enable_desc": "Use Demucs AI to extract vocals - cleaner reference audio",
+        "separate_disable": "⏭️  Skip BGM Removal",
+        "separate_disable_desc": "Use original audio (only if already clean)",
+        "separate_running": "Separating vocals from background music...",
+        "separate_complete": "✅ Vocals extracted successfully",
+        "separate_not_installed": "Demucs not installed. Run: pip install demucs",
+        # Transcribe Language
+        "transcribe_lang_title": "Transcribe Language",
+        "transcribe_lang_subtitle": "Select the language of the audio to transcribe",
+        # TTS Language
+        "tts_lang_title": "TTS Language",
+        "tts_lang_subtitle": "Select the language for generated voice",
         # Split mode
         "split_title": "Split Mode",
         "split_subtitle": "Choose how to split the audio",
@@ -98,6 +130,14 @@ TEXTS = {
         "bye": "👋 Bye!",
         "cancelled": "Cancelled",
         "no_gpu_warning": "No GPU detected, using CPU (will be slow)",
+        "cleanup_title": "Cleanup",
+        "cleanup_confirm": "Delete existing output files?",
+        "cleanup_yes": "🗑️  Yes, delete all",
+        "cleanup_yes_desc": "Remove all existing .wav files in output/notifications",
+        "cleanup_no": "⏭️  No, keep existing",
+        "cleanup_no_desc": "Keep existing files (may overwrite some)",
+        "cleanup_deleted": "Deleted {n} existing files",
+        "cleanup_skipped": "Keeping existing files",
     },
     "ko": {
         # Menu
@@ -105,15 +145,42 @@ TEXTS = {
         "main_title": "Karina Voice Generator",
         "main_subtitle": "aespa 카리나 음성으로 Claude Code 알림음 생성",
         "menu_full": "🚀 전체 파이프라인 실행",
-        "menu_full_desc": "다운로드 → 분할 → 전사 → TTS 생성",
+        "menu_full_desc": "다운로드 → [BGM 제거] → 분할 → 전사 → [후처리] → TTS",
         "menu_download": "📥 음성 다운로드 & 추출",
-        "menu_download_desc": "YouTube에서 음성 다운로드 후 세그먼트 분할",
+        "menu_download_desc": "다운로드 → [BGM 제거] → 분할 → 세그먼트 선택",
         "menu_transcribe": "📝 전사(Transcribe)부터 시작",
-        "menu_transcribe_desc": "기존 오디오로 전사 → TTS 생성",
+        "menu_transcribe_desc": "기존 오디오 → 전사 → [후처리] → TTS",
         "menu_generate": "🎤 음성 생성만",
-        "menu_generate_desc": "기존 전사 결과로 TTS 음성만 생성",
+        "menu_generate_desc": "기존 전사 → [후처리] → TTS",
+        "menu_postprocess": "🔊 후처리만",
+        "menu_postprocess_desc": "기존 오디오 향상 (노이즈 제거, EQ, 음량 정규화)",
         "menu_exit": "❌ 종료",
         "cancel": "❌ 취소",
+        # Post-processing
+        "postprocess_title": "후처리 설정",
+        "postprocess_subtitle": "⚠️  주의: 목소리 품질이 저하될 수 있음. 건너뛰기 권장.",
+        "postprocess_enable": "✅ 후처리 활성화",
+        "postprocess_enable_desc": "노이즈 제거, EQ, 다이나믹스 적용 (목소리 특성 손실 가능)",
+        "postprocess_disable": "⏭️  후처리 건너뛰기 (권장)",
+        "postprocess_disable_desc": "원본 TTS 출력 유지 - 더 좋은 음질",
+        "postprocess_complete": "✨ 후처리 완료!",
+        "postprocess_files": "{n}개 파일 처리됨",
+        # Source separation
+        "separate_title": "음원 분리",
+        "separate_subtitle": "⚠️  주의: 배경음악이 있으면 음성 복제 품질이 저하됩니다",
+        "separate_enable": "🎵 배경음악 제거 (권장)",
+        "separate_enable_desc": "Demucs AI로 보컬만 추출 - 더 깨끗한 레퍼런스 오디오",
+        "separate_disable": "⏭️  배경음악 제거 건너뛰기",
+        "separate_disable_desc": "원본 오디오 사용 (이미 깨끗한 경우만)",
+        "separate_running": "배경음악에서 보컬 분리 중...",
+        "separate_complete": "✅ 보컬 추출 완료",
+        "separate_not_installed": "Demucs가 설치되지 않았습니다. 실행: pip install demucs",
+        # Transcribe Language
+        "transcribe_lang_title": "전사 언어",
+        "transcribe_lang_subtitle": "전사할 오디오의 언어를 선택하세요",
+        # TTS Language
+        "tts_lang_title": "TTS 언어",
+        "tts_lang_subtitle": "생성할 음성의 언어를 선택하세요",
         # Split mode
         "split_title": "분할 모드 선택",
         "split_subtitle": "오디오 분할 방식을 선택하세요",
@@ -150,6 +217,14 @@ TEXTS = {
         "bye": "👋 안녕히 가세요!",
         "cancelled": "취소됨",
         "no_gpu_warning": "GPU가 감지되지 않았습니다. CPU 사용 (느림)",
+        "cleanup_title": "정리",
+        "cleanup_confirm": "기존 출력 파일을 삭제할까요?",
+        "cleanup_yes": "🗑️  예, 모두 삭제",
+        "cleanup_yes_desc": "output/notifications의 모든 .wav 파일 삭제",
+        "cleanup_no": "⏭️  아니오, 유지",
+        "cleanup_no_desc": "기존 파일 유지 (일부 덮어쓸 수 있음)",
+        "cleanup_deleted": "{n}개의 기존 파일 삭제됨",
+        "cleanup_skipped": "기존 파일 유지",
     },
 }
 
@@ -183,11 +258,12 @@ NOTIFICATION_LINES_FILE = PROJECT_ROOT / "notification_lines.json"
 
 def load_notification_lines() -> dict:
     """Load notification lines from JSON file."""
-    with open(NOTIFICATION_LINES_FILE, "r", encoding="utf-8") as f:
+    with open(NOTIFICATION_LINES_FILE, encoding="utf-8") as f:
         return json.load(f)
 
 
 # ============== Interactive Menu ==============
+
 
 class InteractiveMenu:
     """Beautiful interactive menu with arrow key navigation."""
@@ -201,19 +277,19 @@ class InteractiveMenu:
     def _render(self) -> Panel:
         """Render the menu."""
         menu_text = Text()
-        
+
         for i, opt in enumerate(self.options):
             if i == self.selected:
                 menu_text.append("  ▸ ", style="bold cyan")
                 menu_text.append(f"{opt['label']}\n", style="bold white on blue")
-                if opt.get('desc'):
+                if opt.get("desc"):
                     menu_text.append(f"    {opt['desc']}\n", style="dim cyan")
             else:
                 menu_text.append("    ", style="dim")
                 menu_text.append(f"{opt['label']}\n", style="white")
-                if opt.get('desc'):
+                if opt.get("desc"):
                     menu_text.append(f"    {opt['desc']}\n", style="dim")
-            
+
             if i < len(self.options) - 1:
                 menu_text.append("\n")
 
@@ -231,20 +307,31 @@ class InteractiveMenu:
 
     def run(self) -> int | None:
         """Run the interactive menu. Returns selected index or None if cancelled."""
+        # Get key constants safely (different readchar versions)
+        KEY_UP = getattr(readchar.key, "UP", "\x1b[A")
+        KEY_DOWN = getattr(readchar.key, "DOWN", "\x1b[B")
+        KEY_ENTER = getattr(readchar.key, "ENTER", "\r")
+        KEY_ESCAPE = getattr(readchar.key, "ESCAPE", "\x1b")
+
         with Live(self._render(), console=console, refresh_per_second=30, transient=True) as live:
             while True:
-                key = readchar.readkey()
-                
-                if key == readchar.key.UP:
-                    self.selected = (self.selected - 1) % len(self.options)
-                elif key == readchar.key.DOWN:
-                    self.selected = (self.selected + 1) % len(self.options)
-                elif key == readchar.key.ENTER:
-                    return self.selected
-                elif key.lower() == 'q' or key == readchar.key.ESCAPE:
-                    return None
-                
-                live.update(self._render())
+                try:
+                    key = readchar.readkey()
+
+                    if key == KEY_UP:
+                        self.selected = (self.selected - 1) % len(self.options)
+                    elif key == KEY_DOWN:
+                        self.selected = (self.selected + 1) % len(self.options)
+                    elif key == KEY_ENTER or key == "\n":
+                        return self.selected
+                    elif key.lower() == "q" or key == KEY_ESCAPE:
+                        return None
+                    # Ignore all other keys
+
+                    live.update(self._render())
+                except Exception:
+                    # Ignore any key reading errors
+                    pass
 
 
 def show_language_menu() -> str:
@@ -257,7 +344,7 @@ def show_language_menu() -> str:
     menu = InteractiveMenu(
         title="Language / 언어",
         subtitle="Select your language / 언어를 선택하세요",
-        options=options
+        options=options,
     )
 
     result = menu.run()
@@ -273,14 +360,15 @@ def show_main_menu() -> str | None:
         {"label": t("menu_download"), "desc": t("menu_download_desc"), "action": "download"},
         {"label": t("menu_transcribe"), "desc": t("menu_transcribe_desc"), "action": "transcribe"},
         {"label": t("menu_generate"), "desc": t("menu_generate_desc"), "action": "generate"},
+        {
+            "label": t("menu_postprocess"),
+            "desc": t("menu_postprocess_desc"),
+            "action": "postprocess",
+        },
         {"label": t("menu_exit"), "desc": "", "action": "exit"},
     ]
 
-    menu = InteractiveMenu(
-        title=t("main_title"),
-        subtitle=t("main_subtitle"),
-        options=options
-    )
+    menu = InteractiveMenu(title=t("main_title"), subtitle=t("main_subtitle"), options=options)
 
     result = menu.run()
     if result is None:
@@ -294,9 +382,7 @@ def show_segment_menu(segments: list[Path]) -> int | None:
     options.append({"label": t("cancel"), "desc": ""})
 
     menu = InteractiveMenu(
-        title=t("segment_title"),
-        subtitle=t("segment_subtitle"),
-        options=options
+        title=t("segment_title"), subtitle=t("segment_subtitle"), options=options
     )
 
     result = menu.run()
@@ -313,16 +399,140 @@ def show_split_mode_menu() -> str | None:
         {"label": t("cancel"), "desc": ""},
     ]
 
-    menu = InteractiveMenu(
-        title=t("split_title"),
-        subtitle=t("split_subtitle"),
-        options=options
-    )
+    menu = InteractiveMenu(title=t("split_title"), subtitle=t("split_subtitle"), options=options)
 
     result = menu.run()
     if result is None or result == 2:
         return None
     return "auto" if result == 0 else "manual"
+
+
+def show_postprocess_menu() -> bool:
+    """Show post-processing enable/disable menu. Returns True if enabled."""
+    options = [
+        {"label": t("postprocess_disable"), "desc": t("postprocess_disable_desc")},
+        {"label": t("postprocess_enable"), "desc": t("postprocess_enable_desc")},
+    ]
+
+    menu = InteractiveMenu(
+        title=t("postprocess_title"), subtitle=t("postprocess_subtitle"), options=options
+    )
+
+    result = menu.run()
+    # Default to disabled (skip) if cancelled - TTS output is already clean
+    return result == 1
+
+
+def show_cleanup_menu() -> bool:
+    """Show cleanup confirmation menu. Returns True if user wants to delete existing files."""
+    # Check if there are existing files
+    if not NOTIFICATIONS_DIR.exists():
+        return False
+
+    existing_files = list(NOTIFICATIONS_DIR.rglob("*.wav"))
+    if not existing_files:
+        return False
+
+    options = [
+        {"label": t("cleanup_yes"), "desc": t("cleanup_yes_desc")},
+        {"label": t("cleanup_no"), "desc": t("cleanup_no_desc")},
+    ]
+
+    menu = InteractiveMenu(
+        title=t("cleanup_title"),
+        subtitle=f"{t('cleanup_confirm')} ({len(existing_files)} files)",
+        options=options,
+    )
+
+    result = menu.run()
+    return result == 0
+
+
+def cleanup_output_files():
+    """Delete all existing wav files in the notifications output directory."""
+    if not NOTIFICATIONS_DIR.exists():
+        return 0
+
+    deleted_count = 0
+    for wav_file in NOTIFICATIONS_DIR.rglob("*.wav"):
+        wav_file.unlink()
+        deleted_count += 1
+
+    # Also remove empty subdirectories
+    for subdir in NOTIFICATIONS_DIR.iterdir():
+        if subdir.is_dir() and not any(subdir.iterdir()):
+            subdir.rmdir()
+
+    return deleted_count
+
+
+# Supported languages (Korean and English first, then alphabetical)
+# tts_code: Qwen3-TTS language code, whisper_code: Whisper ISO 639-1 code
+SUPPORTED_LANGUAGES = [
+    {"tts_code": "korean", "whisper_code": "ko", "name": "Korean", "flag": "🇰🇷"},
+    {"tts_code": "english", "whisper_code": "en", "name": "English", "flag": "🇺🇸"},
+    {"tts_code": "chinese", "whisper_code": "zh", "name": "Chinese", "flag": "🇨🇳"},
+    {"tts_code": "french", "whisper_code": "fr", "name": "French", "flag": "🇫🇷"},
+    {"tts_code": "german", "whisper_code": "de", "name": "German", "flag": "🇩🇪"},
+    {"tts_code": "italian", "whisper_code": "it", "name": "Italian", "flag": "🇮🇹"},
+    {"tts_code": "japanese", "whisper_code": "ja", "name": "Japanese", "flag": "🇯🇵"},
+    {"tts_code": "portuguese", "whisper_code": "pt", "name": "Portuguese", "flag": "🇵🇹"},
+    {"tts_code": "russian", "whisper_code": "ru", "name": "Russian", "flag": "🇷🇺"},
+    {"tts_code": "spanish", "whisper_code": "es", "name": "Spanish", "flag": "🇪🇸"},
+]
+
+# For backwards compatibility
+TTS_LANGUAGES = SUPPORTED_LANGUAGES
+
+
+def show_transcribe_language_menu() -> str:
+    """Show transcribe language selection menu. Returns Whisper language code."""
+    options = [
+        {"label": f"{lang['flag']} {lang['name']}", "desc": ""} for lang in SUPPORTED_LANGUAGES
+    ]
+
+    menu = InteractiveMenu(
+        title=t("transcribe_lang_title"), subtitle=t("transcribe_lang_subtitle"), options=options
+    )
+
+    result = menu.run()
+    if result is None:
+        return "ko"  # Default Korean
+    return SUPPORTED_LANGUAGES[result]["whisper_code"]
+
+
+def show_tts_language_menu() -> str:
+    """Show TTS language selection menu. Returns TTS language code."""
+    options = [
+        {"label": f"{lang['flag']} {lang['name']}", "desc": ""} for lang in SUPPORTED_LANGUAGES
+    ]
+
+    menu = InteractiveMenu(
+        title=t("tts_lang_title"), subtitle=t("tts_lang_subtitle"), options=options
+    )
+
+    result = menu.run()
+    if result is None:
+        return "korean"  # Default
+    return SUPPORTED_LANGUAGES[result]["tts_code"]
+
+
+def show_source_separation_menu() -> bool:
+    """Show source separation (BGM removal) menu. Returns True if enabled."""
+    options = [
+        {"label": t("separate_enable"), "desc": t("separate_enable_desc")},
+        {"label": t("separate_disable"), "desc": t("separate_disable_desc")},
+    ]
+
+    menu = InteractiveMenu(
+        title=t("separate_title"), subtitle=t("separate_subtitle"), options=options
+    )
+
+    result = menu.run()
+    # Default to enabled if cancelled - BGM degrades voice cloning quality
+    if result is None:
+        return True
+    return result == 0
 
 
 def parse_time_input(time_str: str) -> float | None:
@@ -351,6 +561,7 @@ def parse_time_input(time_str: str) -> float | None:
 
 # ============== Device Check ==============
 
+
 def check_device() -> DeviceInfo:
     """Check and display device information."""
     console.print(Panel("[bold]Device Environment Check[/bold]", style="blue"))
@@ -364,6 +575,7 @@ def check_device() -> DeviceInfo:
 
 # ============== Pipeline Steps ==============
 
+
 def download_audio(url: str, output_name: str = "karina_sample") -> Path:
     """Download audio from YouTube."""
     console.print(Panel("[bold]Step 1: Download Audio from YouTube[/bold]", style="blue"))
@@ -371,10 +583,22 @@ def download_audio(url: str, output_name: str = "karina_sample") -> Path:
     RAW_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     output_path = RAW_AUDIO_DIR / f"{output_name}.%(ext)s"
 
-    cmd = ["yt-dlp", "-x", "--audio-format", "wav", "--audio-quality", "0", "-o", str(output_path), url]
+    cmd = [
+        "yt-dlp",
+        "-x",
+        "--audio-format",
+        "wav",
+        "--audio-quality",
+        "0",
+        "-o",
+        str(output_path),
+        url,
+    ]
     logger.info(f"Downloading: {url}")
 
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+    with Progress(
+        SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+    ) as progress:
         progress.add_task("Downloading...", total=None)
         subprocess.run(cmd, check=True)
 
@@ -384,6 +608,57 @@ def download_audio(url: str, output_name: str = "karina_sample") -> Path:
         console.print()
         return downloaded[0]
     raise FileNotFoundError("Download failed")
+
+
+def separate_vocals_from_audio(input_file: Path, device_info: DeviceInfo) -> Path:
+    """Separate vocals from background music using Demucs."""
+    console.print(
+        Panel("[bold]Step 1.5: Separate Vocals from Background Music (Demucs)[/bold]", style="blue")
+    )
+
+    try:
+        from post_process import check_demucs_available, separate_vocals_to_file
+    except ImportError:
+        logger.error(t("separate_not_installed"))
+        return input_file
+
+    if not check_demucs_available():
+        logger.error(t("separate_not_installed"))
+        return input_file
+
+    # Determine device for demucs
+    if device_info.device_type == DeviceType.CUDA:
+        device = "cuda"
+    elif device_info.device_type == DeviceType.MPS:
+        device = "mps"
+    else:
+        device = "cpu"
+
+    output_path = RAW_AUDIO_DIR / f"{input_file.stem}_vocals.wav"
+
+    logger.info(t("separate_running"))
+    with Progress(
+        SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+    ) as progress:
+        progress.add_task(t("separate_running"), total=None)
+        try:
+            separate_vocals_to_file(
+                input_file,
+                output_path,
+                model="htdemucs",
+                device=device,
+                quiet=True,
+            )
+            # Normalize audio to prevent clipping warnings in TTS
+            normalize_audio_file(output_path)
+            logger.success(t("separate_complete"))
+            console.print()
+            return output_path
+        except Exception as e:
+            logger.error(f"Source separation failed: {e}")
+            logger.warning("Falling back to original audio")
+            console.print()
+            return input_file
 
 
 def split_audio(input_file: Path, segment_duration: int = 15) -> list[Path]:
@@ -448,7 +723,13 @@ def split_audio(input_file: Path, segment_duration: int = 15) -> list[Path]:
         # Auto mode: split at 30-second intervals
         segment_starts = list(range(0, len(audio), 30000))
 
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
+        with Progress(
+            SpinnerColumn(style="magenta"),
+            TextColumn("[bold cyan]{task.description}"),
+            BarColumn(complete_style="magenta", finished_style="green"),
+            TaskProgressColumn(),
+            console=console,
+        ) as progress:
             task = progress.add_task("Splitting audio...", total=len(segment_starts))
 
             for start_ms in segment_starts:
@@ -499,38 +780,63 @@ def select_segment(segments: list[Path]) -> Path | None:
     final_path = CLEAN_AUDIO_DIR / "karina_clean.wav"
     shutil.copy(selected, final_path)
     logger.info(f"Copied to: {final_path}")
+
+    # Normalize audio to prevent clipping warnings in TTS
+    normalize_audio_file(final_path)
+
     console.print()
     return final_path
 
 
-def transcribe_audio(audio_path: Path, device_info: DeviceInfo) -> str:
+def transcribe_audio(audio_path: Path, device_info: DeviceInfo, language: str = "ko") -> str:
     """Transcribe audio using the appropriate backend for the platform."""
-    console.print(Panel(f"[bold]Step 4: Transcribe Audio ({device_info.whisper_backend})[/bold]", style="blue"))
+    console.print(
+        Panel(
+            f"[bold]Step 4: Transcribe Audio ({device_info.whisper_backend})[/bold]", style="blue"
+        )
+    )
 
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Transcribe language: {language}")
 
     if device_info.whisper_backend == "faster-whisper":
         from faster_whisper import WhisperModel
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+
+        with Progress(
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+        ) as progress:
             progress.add_task("Loading Whisper large-v3 model...", total=None)
             compute_type = "float16" if device_info.dtype == torch.float16 else "float32"
-            model = WhisperModel("large-v3", device=device_info.device_type.value, compute_type=compute_type)
+            model = WhisperModel(
+                "large-v3", device=device_info.device_type.value, compute_type=compute_type
+            )
 
         logger.info(f"Transcribing: {audio_path}")
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+        with Progress(
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+        ) as progress:
             progress.add_task("Transcribing...", total=None)
-            segments, info = model.transcribe(str(audio_path), language="ko")
+            segments, info = model.transcribe(str(audio_path), language=language)
             text = " ".join([seg.text for seg in segments])
     else:
         import mlx_whisper
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+
+        with Progress(
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+        ) as progress:
             progress.add_task("Loading Whisper large-v3 model (MLX)...", total=None)
         logger.info(f"Transcribing: {audio_path}")
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+        with Progress(
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+        ) as progress:
             progress.add_task("Transcribing...", total=None)
-            result = mlx_whisper.transcribe(str(audio_path), path_or_hf_repo="mlx-community/whisper-large-v3-mlx", language="ko")
+            result = mlx_whisper.transcribe(
+                str(audio_path),
+                path_or_hf_repo="mlx-community/whisper-large-v3-mlx",
+                language=language,
+            )
             text = result["text"]
-            info = type("Info", (), {"language": "ko"})()
+            info = type("Info", (), {"language": language})()
 
     result_data = {"text": text, "language": info.language}
     output_path = TRANSCRIPTS_DIR / f"{audio_path.stem}_transcript.json"
@@ -556,7 +862,9 @@ def setup_tts_model():
 
     if not local_dir.exists():
         logger.info(f"Downloading {model_name}...")
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+        with Progress(
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+        ) as progress:
             progress.add_task("Downloading model...", total=None)
             snapshot_download(repo_id=model_name, local_dir=str(local_dir))
     else:
@@ -567,7 +875,9 @@ def setup_tts_model():
 
     if not tokenizer_dir.exists():
         logger.info(f"Downloading {tokenizer_name}...")
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+        with Progress(
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+        ) as progress:
             progress.add_task("Downloading tokenizer...", total=None)
             snapshot_download(repo_id=tokenizer_name, local_dir=str(tokenizer_dir))
     else:
@@ -578,16 +888,69 @@ def setup_tts_model():
     return local_dir
 
 
-def post_process_audio(audio: np.ndarray, sr: int, silence_ms: int = 300) -> tuple[np.ndarray, int]:
-    """Post-process audio: add silence at beginning."""
+def normalize_audio(audio: np.ndarray) -> np.ndarray:
+    """Normalize audio to [-1.0, 1.0] range to prevent clipping warnings."""
+    max_val = np.max(np.abs(audio))
+    if max_val > 1.0:
+        return audio / max_val
+    return audio
+
+
+def normalize_audio_file(audio_path: Path) -> None:
+    """Normalize an audio file in place to [-1.0, 1.0] range."""
+    audio, sr = sf.read(str(audio_path))
+    max_val = np.max(np.abs(audio))
+    if max_val > 1.0:
+        logger.info(f"Normalizing audio (peak: {max_val:.2f} -> 1.0)")
+        audio = audio / max_val
+        sf.write(str(audio_path), audio, sr)
+
+
+def add_silence(audio: np.ndarray, sr: int, silence_ms: int = 300) -> tuple[np.ndarray, int]:
+    """Add silence at the beginning of audio."""
     silence_samples = int(sr * silence_ms / 1000)
     silence = np.zeros(silence_samples, dtype=audio.dtype)
     return np.concatenate([silence, audio]), sr
 
 
-def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path, device_info: DeviceInfo):
+def enhance_audio(audio: np.ndarray, sr: int) -> np.ndarray:
+    """Apply audio enhancement: denoise, EQ, dynamics, loudness normalization."""
+    try:
+        from post_process import post_process_audio as pp_audio
+
+        return pp_audio(
+            audio,
+            sr,
+            denoise=True,
+            eq=True,
+            dynamics=True,
+            loudness_normalize=True,
+            target_lufs=-14.0,
+            denoise_strength=0.6,
+        )
+    except ImportError as e:
+        logger.warning(f"Post-processing dependencies not installed: {e}. Skipping enhancement.")
+        return audio
+    except Exception as e:
+        logger.warning(f"Post-processing failed: {e}. Skipping enhancement.")
+        return audio
+
+
+def generate_notifications(
+    ref_audio_path: Path,
+    ref_text: str,
+    model_path: Path,
+    device_info: DeviceInfo,
+    enable_postprocess: bool = True,
+    tts_language: str = "korean",
+):
     """Generate all notification voice lines using voice cloning."""
-    console.print(Panel(f"[bold]Step 6: Generate Notification Voice Lines ({device_info.device_type.value.upper()})[/bold]", style="blue"))
+    console.print(
+        Panel(
+            f"[bold]Step 6: Generate Notification Voice Lines ({device_info.device_type.value.upper()})[/bold]",
+            style="blue",
+        )
+    )
 
     from qwen_tts import Qwen3TTSModel
 
@@ -596,9 +959,19 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     # Load notification lines from JSON file
     notification_lines = load_notification_lines()
 
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
-        progress.add_task(f"Loading Qwen3-TTS 1.7B model on {device_info.device_type.value.upper()}...", total=None)
-        model = Qwen3TTSModel.from_pretrained(str(model_path), dtype=device_info.dtype, attn_implementation=device_info.attn_implementation, device_map=device_info.torch_device)
+    with Progress(
+        SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+    ) as progress:
+        progress.add_task(
+            f"Loading Qwen3-TTS 1.7B model on {device_info.device_type.value.upper()}...",
+            total=None,
+        )
+        model = Qwen3TTSModel.from_pretrained(
+            str(model_path),
+            dtype=device_info.dtype,
+            attn_implementation=device_info.attn_implementation,
+            device_map=device_info.torch_device,
+        )
 
     if device_info.device_type == DeviceType.MPS:
         torch.mps.synchronize()
@@ -607,8 +980,16 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     logger.info(f"Generating {total} notification voice lines...")
     logger.info(f"Reference audio: {ref_audio_path}")
     logger.info(f"Reference text: {ref_text[:50]}...")
+    logger.info(f"TTS language: {tts_language}")
+    logger.info(f"Post-processing: {'enabled' if enable_postprocess else 'disabled'}")
 
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
+    with Progress(
+        SpinnerColumn(style="magenta"),
+        TextColumn("[bold cyan]{task.description}"),
+        BarColumn(complete_style="magenta", finished_style="green"),
+        TaskProgressColumn(),
+        console=console,
+    ) as progress:
         task = progress.add_task("Generating notifications...", total=total)
 
         for notification_type, lines in notification_lines.items():
@@ -617,13 +998,25 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
 
             for line in lines:
                 output_path = type_dir / line["filename"]
-                wavs, sr = model.generate_voice_clone(text=line["text"], ref_audio=str(ref_audio_path), ref_text=ref_text, language="korean", non_streaming_mode=True)
+                wavs, sr = model.generate_voice_clone(
+                    text=line["text"],
+                    ref_audio=str(ref_audio_path),
+                    ref_text=ref_text,
+                    language=tts_language,
+                    non_streaming_mode=True,
+                )
 
                 if device_info.device_type == DeviceType.MPS:
                     torch.mps.synchronize()
 
-                processed_audio, sr = post_process_audio(wavs[0], sr, silence_ms=300)
-                sf.write(str(output_path), processed_audio, sr)
+                # Add silence at the beginning
+                audio_with_silence, sr = add_silence(wavs[0], sr, silence_ms=300)
+                # Apply audio enhancement if enabled
+                if enable_postprocess:
+                    final_audio = enhance_audio(audio_with_silence, sr)
+                else:
+                    final_audio = audio_with_silence
+                sf.write(str(output_path), final_audio, sr)
                 progress.advance(task)
 
     logger.success(f"All notifications generated in: {NOTIFICATIONS_DIR}")
@@ -631,7 +1024,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     table = Table(title="Generated Files", box=box.ROUNDED)
     table.add_column("Type", style="cyan")
     table.add_column("File", style="green")
-    for notification_type in notification_lines.keys():
+    for notification_type in notification_lines:
         type_dir = NOTIFICATIONS_DIR / notification_type
         for f in type_dir.glob("*.wav"):
             table.add_row(notification_type, f.name)
@@ -641,15 +1034,17 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
 
 def show_completion():
     """Show completion message."""
-    console.print(Panel.fit(
-        f"[bold green]{t('pipeline_complete')}[/bold green]\n\n"
-        f"Generated notifications are in: [cyan]{NOTIFICATIONS_DIR}[/cyan]\n\n"
-        f"[dim]{t('next_steps')}[/dim]\n"
-        f"{t('next_step_1')}\n"
-        f"{t('next_step_2')}\n"
-        f"{t('next_step_3')}",
-        border_style="green"
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold green]{t('pipeline_complete')}[/bold green]\n\n"
+            f"Generated notifications are in: [cyan]{NOTIFICATIONS_DIR}[/cyan]\n\n"
+            f"[dim]{t('next_steps')}[/dim]\n"
+            f"{t('next_step_1')}\n"
+            f"{t('next_step_2')}\n"
+            f"{t('next_step_3')}",
+            border_style="green",
+        )
+    )
 
 
 # ============== Main Entry Points ==============
@@ -659,29 +1054,66 @@ DEFAULT_YOUTUBE_URL = "https://www.youtube.com/watch?v=r96zEiIHVf4"
 
 def run_full_pipeline(url: str, device_info: DeviceInfo):
     """Run the complete pipeline."""
+    # Ask about cleanup if there are existing output files
+    if show_cleanup_menu():
+        deleted = cleanup_output_files()
+        logger.info(t("cleanup_deleted", n=deleted))
+    else:
+        # Check if there were files but user chose to keep them
+        if NOTIFICATIONS_DIR.exists() and list(NOTIFICATIONS_DIR.rglob("*.wav")):
+            logger.info(t("cleanup_skipped"))
+
     audio_file = download_audio(url)
+    # Ask about source separation (BGM removal)
+    enable_separation = show_source_separation_menu()
+    if enable_separation:
+        audio_file = separate_vocals_from_audio(audio_file, device_info)
     segments = split_audio(audio_file)
     selected_segment = select_segment(segments)
     if selected_segment is None:
         logger.info("Cancelled")
         return
-    transcript = transcribe_audio(selected_segment, device_info)
+    # Ask about transcribe language
+    transcribe_lang = show_transcribe_language_menu()
+    transcript = transcribe_audio(selected_segment, device_info, transcribe_lang)
     model_path = setup_tts_model()
-    generate_notifications(selected_segment, transcript, model_path, device_info)
+    # Ask about TTS language
+    tts_language = show_tts_language_menu()
+    # Ask about post-processing
+    enable_postprocess = show_postprocess_menu()
+    generate_notifications(
+        selected_segment, transcript, model_path, device_info, enable_postprocess, tts_language
+    )
     show_completion()
 
 
-def run_download_only(url: str):
+def run_download_only(url: str, device_info: DeviceInfo):
     """Download and split audio only."""
     audio_file = download_audio(url)
+    # Ask about source separation (BGM removal)
+    enable_separation = show_source_separation_menu()
+    if enable_separation:
+        audio_file = separate_vocals_from_audio(audio_file, device_info)
     segments = split_audio(audio_file)
     selected = select_segment(segments)
     if selected:
-        console.print(Panel.fit(f"[bold green]{t('audio_ready')}[/bold green]\n\nSelected: [cyan]{selected}[/cyan]", border_style="green"))
+        console.print(
+            Panel.fit(
+                f"[bold green]{t('audio_ready')}[/bold green]\n\nSelected: [cyan]{selected}[/cyan]",
+                border_style="green",
+            )
+        )
 
 
 def run_from_transcribe(device_info: DeviceInfo):
     """Run from transcribe step using existing audio."""
+    # Ask about cleanup if there are existing output files
+    if show_cleanup_menu():
+        deleted = cleanup_output_files()
+        logger.info(t("cleanup_deleted", n=deleted))
+    elif NOTIFICATIONS_DIR.exists() and list(NOTIFICATIONS_DIR.rglob("*.wav")):
+        logger.info(t("cleanup_skipped"))
+
     clean_audio = CLEAN_AUDIO_DIR / "karina_clean.wav"
     if not clean_audio.exists():
         existing = list(CLEAN_AUDIO_DIR.glob("segment_*.wav"))
@@ -694,14 +1126,29 @@ def run_from_transcribe(device_info: DeviceInfo):
             return
         clean_audio = selected
 
-    transcript = transcribe_audio(clean_audio, device_info)
+    # Ask about transcribe language
+    transcribe_lang = show_transcribe_language_menu()
+    transcript = transcribe_audio(clean_audio, device_info, transcribe_lang)
     model_path = setup_tts_model()
-    generate_notifications(clean_audio, transcript, model_path, device_info)
+    # Ask about TTS language
+    tts_language = show_tts_language_menu()
+    # Ask about post-processing
+    enable_postprocess = show_postprocess_menu()
+    generate_notifications(
+        clean_audio, transcript, model_path, device_info, enable_postprocess, tts_language
+    )
     show_completion()
 
 
 def run_generate_only(device_info: DeviceInfo):
     """Generate notifications using existing transcript."""
+    # Ask about cleanup if there are existing output files
+    if show_cleanup_menu():
+        deleted = cleanup_output_files()
+        logger.info(t("cleanup_deleted", n=deleted))
+    elif NOTIFICATIONS_DIR.exists() and list(NOTIFICATIONS_DIR.rglob("*.wav")):
+        logger.info(t("cleanup_skipped"))
+
     clean_audio = CLEAN_AUDIO_DIR / "karina_clean.wav"
     if not clean_audio.exists():
         logger.error(f"No clean audio found: {clean_audio}")
@@ -714,30 +1161,82 @@ def run_generate_only(device_info: DeviceInfo):
         logger.error("Please run 'Transcribe' first")
         return
 
-    with open(transcript_files[0], "r", encoding="utf-8") as f:
+    with open(transcript_files[0], encoding="utf-8") as f:
         transcript_data = json.load(f)
     transcript = transcript_data["text"]
 
     logger.info(f"Using transcript: {transcript[:50]}...")
     model_path = setup_tts_model()
-    generate_notifications(clean_audio, transcript, model_path, device_info)
+    # Ask about TTS language
+    tts_language = show_tts_language_menu()
+    # Ask about post-processing
+    enable_postprocess = show_postprocess_menu()
+    generate_notifications(
+        clean_audio, transcript, model_path, device_info, enable_postprocess, tts_language
+    )
     show_completion()
+
+
+def run_postprocess_only():
+    """Run post-processing on existing notification files."""
+    console.print(Panel(f"[bold]{t('postprocess_title')}[/bold]", style="blue"))
+
+    # Check if notifications directory exists
+    if not NOTIFICATIONS_DIR.exists():
+        logger.error(f"No notifications found in {NOTIFICATIONS_DIR}")
+        logger.error("Please run 'Generate' first")
+        return
+
+    wav_files = list(NOTIFICATIONS_DIR.rglob("*.wav"))
+    if not wav_files:
+        logger.error(f"No .wav files found in {NOTIFICATIONS_DIR}")
+        return
+
+    logger.info(f"Found {len(wav_files)} audio files to process")
+
+    try:
+        from post_process import post_process_directory
+
+        processed = post_process_directory(
+            NOTIFICATIONS_DIR,
+            denoise=True,
+            eq=True,
+            dynamics=True,
+            loudness_normalize=True,
+            target_lufs=-14.0,
+            denoise_strength=0.6,
+        )
+        console.print(
+            Panel.fit(
+                f"[bold green]{t('postprocess_complete')}[/bold green]\n\n"
+                f"{t('postprocess_files', n=len(processed))}\n"
+                f"Location: [cyan]{NOTIFICATIONS_DIR}[/cyan]",
+                border_style="green",
+            )
+        )
+    except ImportError:
+        logger.error("Post-processing dependencies not installed.")
+        logger.error("Run: pixi run install-deps-mac (or install-deps-linux)")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Karina Voice Notification Generator")
     parser.add_argument("url", nargs="?", default=DEFAULT_YOUTUBE_URL, help="YouTube URL")
-    parser.add_argument("--skip-download", action="store_true", help="Skip download, use existing audio")
+    parser.add_argument(
+        "--skip-download", action="store_true", help="Skip download, use existing audio"
+    )
     parser.add_argument("--no-menu", action="store_true", help="Skip menu, run full pipeline")
     parser.add_argument("--lang", choices=["en", "ko"], default=None, help="Language (en/ko)")
     args = parser.parse_args()
 
     # Show banner
-    console.print(Panel.fit(
-        "[bold magenta]🎤 Karina Voice Notification Generator[/bold magenta]\n"
-        "[dim]Cross-platform (CUDA / MPS / CPU)[/dim]",
-        border_style="magenta"
-    ))
+    console.print(
+        Panel.fit(
+            "[bold magenta]🎤 Karina Voice Notification Generator[/bold magenta]\n"
+            "[dim]Cross-platform (CUDA / MPS / CPU)[/dim]",
+            border_style="magenta",
+        )
+    )
     console.print()
 
     # Language selection
@@ -767,15 +1266,27 @@ def main():
             console.print(f"\n[dim]{t('bye')}[/dim]")
             break
         elif action == "full":
-            url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] [dim]({t('youtube_url_prompt')})[/dim]: ").strip() or args.url
+            url = (
+                console.input(
+                    f"\n[bold yellow]YouTube URL[/bold yellow] [dim]({t('youtube_url_prompt')})[/dim]: "
+                ).strip()
+                or args.url
+            )
             run_full_pipeline(url, device_info)
         elif action == "download":
-            url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] [dim]({t('youtube_url_prompt')})[/dim]: ").strip() or args.url
-            run_download_only(url)
+            url = (
+                console.input(
+                    f"\n[bold yellow]YouTube URL[/bold yellow] [dim]({t('youtube_url_prompt')})[/dim]: "
+                ).strip()
+                or args.url
+            )
+            run_download_only(url, device_info)
         elif action == "transcribe":
             run_from_transcribe(device_info)
         elif action == "generate":
             run_generate_only(device_info)
+        elif action == "postprocess":
+            run_postprocess_only()
 
         console.print("\n")
 
