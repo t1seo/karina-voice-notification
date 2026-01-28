@@ -5,9 +5,9 @@
 # Models (too large for git)
 models/
 
-# Raw audio files
-output/raw/*.wav
-output/raw/*.webm
+# Audio files (generated, not tracked)
+output/**/*.wav
+output/**/*.webm
 
 # Backup files
 backup/
