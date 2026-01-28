@@ -83,6 +83,9 @@ TEXTS = {
         "separate_running": "Separating vocals from background music...",
         "separate_complete": "✅ Vocals extracted successfully",
         "separate_not_installed": "Demucs not installed. Run: pip install demucs",
+        # Transcribe Language
+        "transcribe_lang_title": "Transcribe Language",
+        "transcribe_lang_subtitle": "Select the language of the audio to transcribe",
         # TTS Language
         "tts_lang_title": "TTS Language",
         "tts_lang_subtitle": "Select the language for generated voice",
@@ -159,6 +162,9 @@ TEXTS = {
         "separate_running": "배경음악에서 보컬 분리 중...",
         "separate_complete": "✅ 보컬 추출 완료",
         "separate_not_installed": "Demucs가 설치되지 않았습니다. 실행: pip install demucs",
+        # Transcribe Language
+        "transcribe_lang_title": "전사 언어",
+        "transcribe_lang_subtitle": "전사할 오디오의 언어를 선택하세요",
         # TTS Language
         "tts_lang_title": "TTS 언어",
         "tts_lang_subtitle": "생성할 음성의 언어를 선택하세요",
@@ -392,26 +398,49 @@ def show_postprocess_menu() -> bool:
     return result is None or result == 0
 
 
-# Qwen3-TTS supported languages (Korean and English first, then alphabetical)
-TTS_LANGUAGES = [
-    {"code": "korean", "name": "Korean", "flag": "🇰🇷"},
-    {"code": "english", "name": "English", "flag": "🇺🇸"},
-    {"code": "chinese", "name": "Chinese", "flag": "🇨🇳"},
-    {"code": "french", "name": "French", "flag": "🇫🇷"},
-    {"code": "german", "name": "German", "flag": "🇩🇪"},
-    {"code": "italian", "name": "Italian", "flag": "🇮🇹"},
-    {"code": "japanese", "name": "Japanese", "flag": "🇯🇵"},
-    {"code": "portuguese", "name": "Portuguese", "flag": "🇵🇹"},
-    {"code": "russian", "name": "Russian", "flag": "🇷🇺"},
-    {"code": "spanish", "name": "Spanish", "flag": "🇪🇸"},
+# Supported languages (Korean and English first, then alphabetical)
+# tts_code: Qwen3-TTS language code, whisper_code: Whisper ISO 639-1 code
+SUPPORTED_LANGUAGES = [
+    {"tts_code": "korean", "whisper_code": "ko", "name": "Korean", "flag": "🇰🇷"},
+    {"tts_code": "english", "whisper_code": "en", "name": "English", "flag": "🇺🇸"},
+    {"tts_code": "chinese", "whisper_code": "zh", "name": "Chinese", "flag": "🇨🇳"},
+    {"tts_code": "french", "whisper_code": "fr", "name": "French", "flag": "🇫🇷"},
+    {"tts_code": "german", "whisper_code": "de", "name": "German", "flag": "🇩🇪"},
+    {"tts_code": "italian", "whisper_code": "it", "name": "Italian", "flag": "🇮🇹"},
+    {"tts_code": "japanese", "whisper_code": "ja", "name": "Japanese", "flag": "🇯🇵"},
+    {"tts_code": "portuguese", "whisper_code": "pt", "name": "Portuguese", "flag": "🇵🇹"},
+    {"tts_code": "russian", "whisper_code": "ru", "name": "Russian", "flag": "🇷🇺"},
+    {"tts_code": "spanish", "whisper_code": "es", "name": "Spanish", "flag": "🇪🇸"},
 ]
+
+# For backwards compatibility
+TTS_LANGUAGES = SUPPORTED_LANGUAGES
+
+
+def show_transcribe_language_menu() -> str:
+    """Show transcribe language selection menu. Returns Whisper language code."""
+    options = [
+        {"label": f"{lang['flag']} {lang['name']}", "desc": ""}
+        for lang in SUPPORTED_LANGUAGES
+    ]
+
+    menu = InteractiveMenu(
+        title=t("transcribe_lang_title"),
+        subtitle=t("transcribe_lang_subtitle"),
+        options=options
+    )
+
+    result = menu.run()
+    if result is None:
+        return "ko"  # Default Korean
+    return SUPPORTED_LANGUAGES[result]["whisper_code"]
 
 
 def show_tts_language_menu() -> str:
-    """Show TTS language selection menu. Returns language code."""
+    """Show TTS language selection menu. Returns TTS language code."""
     options = [
         {"label": f"{lang['flag']} {lang['name']}", "desc": ""}
-        for lang in TTS_LANGUAGES
+        for lang in SUPPORTED_LANGUAGES
     ]
 
     menu = InteractiveMenu(
@@ -423,7 +452,7 @@ def show_tts_language_menu() -> str:
     result = menu.run()
     if result is None:
         return "korean"  # Default
-    return TTS_LANGUAGES[result]["code"]
+    return SUPPORTED_LANGUAGES[result]["tts_code"]
 
 
 def show_source_separation_menu() -> bool:
@@ -666,11 +695,12 @@ def select_segment(segments: list[Path]) -> Path | None:
     return final_path
 
 
-def transcribe_audio(audio_path: Path, device_info: DeviceInfo) -> str:
+def transcribe_audio(audio_path: Path, device_info: DeviceInfo, language: str = "ko") -> str:
     """Transcribe audio using the appropriate backend for the platform."""
     console.print(Panel(f"[bold]Step 4: Transcribe Audio ({device_info.whisper_backend})[/bold]", style="blue"))
 
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Transcribe language: {language}")
 
     if device_info.whisper_backend == "faster-whisper":
         from faster_whisper import WhisperModel
@@ -682,7 +712,7 @@ def transcribe_audio(audio_path: Path, device_info: DeviceInfo) -> str:
         logger.info(f"Transcribing: {audio_path}")
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Transcribing...", total=None)
-            segments, info = model.transcribe(str(audio_path), language="ko")
+            segments, info = model.transcribe(str(audio_path), language=language)
             text = " ".join([seg.text for seg in segments])
     else:
         import mlx_whisper
@@ -691,9 +721,9 @@ def transcribe_audio(audio_path: Path, device_info: DeviceInfo) -> str:
         logger.info(f"Transcribing: {audio_path}")
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Transcribing...", total=None)
-            result = mlx_whisper.transcribe(str(audio_path), path_or_hf_repo="mlx-community/whisper-large-v3-mlx", language="ko")
+            result = mlx_whisper.transcribe(str(audio_path), path_or_hf_repo="mlx-community/whisper-large-v3-mlx", language=language)
             text = result["text"]
-            info = type("Info", (), {"language": "ko"})()
+            info = type("Info", (), {"language": language})()
 
     result_data = {"text": text, "language": info.language}
     output_path = TRANSCRIPTS_DIR / f"{audio_path.stem}_transcript.json"
@@ -858,7 +888,9 @@ def run_full_pipeline(url: str, device_info: DeviceInfo):
     if selected_segment is None:
         logger.info("Cancelled")
         return
-    transcript = transcribe_audio(selected_segment, device_info)
+    # Ask about transcribe language
+    transcribe_lang = show_transcribe_language_menu()
+    transcript = transcribe_audio(selected_segment, device_info, transcribe_lang)
     model_path = setup_tts_model()
     # Ask about TTS language
     tts_language = show_tts_language_menu()
@@ -895,7 +927,9 @@ def run_from_transcribe(device_info: DeviceInfo):
             return
         clean_audio = selected
 
-    transcript = transcribe_audio(clean_audio, device_info)
+    # Ask about transcribe language
+    transcribe_lang = show_transcribe_language_menu()
+    transcript = transcribe_audio(clean_audio, device_info, transcribe_lang)
     model_path = setup_tts_model()
     # Ask about TTS language
     tts_language = show_tts_language_menu()
