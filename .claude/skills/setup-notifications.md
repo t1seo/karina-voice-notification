@@ -78,9 +78,11 @@ ls -la ~/.claude/hooks/claude_notification_hook.py
 
 Report success with the list of notification types:
 
-| Type | Sound | Trigger |
-|------|-------|---------|
-| `permission_prompt` | permission_prompt_1.wav | Permission request |
-| `idle_prompt` | idle_prompt_1.wav | Task complete / Stop |
+| Type | Sound Files | Trigger |
+|------|-------------|---------|
+| `permission_prompt` | permission_prompt_1.wav, permission_prompt_2.wav | Permission request |
+| `idle_prompt` | idle_prompt_1.wav, idle_prompt_2.wav | Task complete / Stop |
 | `auth_success` | auth_success_1.wav | Auth success |
 | `elicitation_dialog` | elicitation_dialog_1.wav | User input needed |
+
+**Note:** When multiple sound files exist for a notification type (e.g., `_1.wav`, `_2.wav`), a random one is played each time.
