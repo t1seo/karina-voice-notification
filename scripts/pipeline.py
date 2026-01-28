@@ -29,11 +29,11 @@ OUTPUT_DIR = PROJECT_ROOT / "output" / "notifications"
 # Notification lines to generate
 NOTIFICATION_LINES = {
     "permission_prompt": [
-        {"text": "잠깐! 이거 해도 돼?", "filename": "permission_prompt_1.wav"},
+        {"text": "잠깐요! 이거 해도 될까요?", "filename": "permission_prompt_1.wav"},
         {"text": "허락이 필요해요~", "filename": "permission_prompt_2.wav"},
     ],
     "idle_prompt": [
-        {"text": "다 했어! 확인해줘~", "filename": "idle_prompt_1.wav"},
+        {"text": "다 했어요! 확인해주세요~", "filename": "idle_prompt_1.wav"},
         {"text": "끝났어요, 봐주세요!", "filename": "idle_prompt_2.wav"},
     ],
     "auth_success": [
