@@ -7,6 +7,7 @@ Usage:
     python pipeline.py <youtube_url>
 """
 
+import argparse
 import subprocess
 import sys
 import json
@@ -303,11 +304,10 @@ DEFAULT_YOUTUBE_URL = "https://www.youtube.com/watch?v=r96zEiIHVf4"
 
 
 def main():
-    if len(sys.argv) < 2:
-        youtube_url = DEFAULT_YOUTUBE_URL
-        print(f"Using default YouTube URL: {youtube_url}")
-    else:
-        youtube_url = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Karina Voice Notification Generator")
+    parser.add_argument("url", nargs="?", default=DEFAULT_YOUTUBE_URL, help="YouTube URL")
+    parser.add_argument("--skip-download", action="store_true", help="Skip download, use existing audio in assets/raw/")
+    args = parser.parse_args()
 
     print("\n" + "=" * 60)
     print("Karina Voice Notification Generator")
@@ -317,8 +317,21 @@ def main():
     # Check GPU
     check_gpu()
 
-    # Step 1: Download audio
-    audio_file = download_audio(youtube_url)
+    # Step 1: Download audio or use existing
+    if args.skip_download:
+        print("=" * 60)
+        print("Step 1: Using Existing Audio (--skip-download)")
+        print("=" * 60)
+        existing = list(RAW_AUDIO_DIR.glob("*.wav")) + list(RAW_AUDIO_DIR.glob("*.mp3"))
+        if not existing:
+            print(f"ERROR: No audio files found in {RAW_AUDIO_DIR}")
+            print("Please upload audio file to assets/raw/ first")
+            sys.exit(1)
+        audio_file = existing[0]
+        print(f"Using: {audio_file}")
+        print()
+    else:
+        audio_file = download_audio(args.url)
 
     # Step 2: Split into segments
     segments = split_audio(audio_file)
