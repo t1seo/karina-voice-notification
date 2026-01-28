@@ -1,0 +1,40 @@
+[workspace]
+name = "karina-tts-notification"
+version = "0.1.0"
+description = "Karina voice notification for Claude Code"
+channels = ["conda-forge", "pytorch"]
+platforms = ["osx-arm64"]
+
+[dependencies]
+# Python (pinned for mlx compatibility)
+python = "3.12.*"
+
+# System dependencies (conda-forge)
+ffmpeg = ">=6.0"
+yt-dlp = ">=2024.1.0"
+
+# Python packages
+pip = ">=24.0"
+
+[pypi-dependencies]
+# Audio processing
+pydub = ">=0.25.1"
+
+# Transcription (MLX-based for Apple Silicon)
+lightning-whisper-mlx = ">=0.0.8"
+
+# TTS - Qwen3-TTS (latest available)
+qwen-tts = "*"
+torch = ">=2.0.0"
+soundfile = ">=0.12.0"
+huggingface-hub = ">=0.20.0"
+
+# Utilities
+tqdm = ">=4.66.0"
+
+[tasks]
+download = "python scripts/download_audio.py"
+extract = "python scripts/extract_segment.py"
+transcribe = "python scripts/transcribe.py"
+setup-tts = "python scripts/setup_qwen_tts.py"
+generate = "python scripts/generate_notifications.py"

@@ -1,0 +1,21 @@
+# Pixi
+.pixi/
+
+# Models (too large for git)
+models/
+
+# Output files
+output/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
