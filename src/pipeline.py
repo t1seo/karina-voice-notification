@@ -60,8 +60,19 @@ TEXTS = {
         "menu_transcribe_desc": "Use existing audio → Transcribe → Generate TTS",
         "menu_generate": "🎤 Generate Only",
         "menu_generate_desc": "Use existing transcript to generate TTS",
+        "menu_postprocess": "🔊 Post-process Only",
+        "menu_postprocess_desc": "Enhance existing audio (denoise, EQ, normalize)",
         "menu_exit": "❌ Exit",
         "cancel": "❌ Cancel",
+        # Post-processing
+        "postprocess_title": "Post-processing",
+        "postprocess_subtitle": "Apply audio enhancement to generated files",
+        "postprocess_enable": "✅ Enable Post-processing",
+        "postprocess_enable_desc": "Apply denoise, EQ, dynamics, loudness normalization",
+        "postprocess_disable": "⏭️  Skip Post-processing",
+        "postprocess_disable_desc": "Use raw TTS output without enhancement",
+        "postprocess_complete": "✨ Post-processing Complete!",
+        "postprocess_files": "Processed {n} files",
         # Split mode
         "split_title": "Split Mode",
         "split_subtitle": "Choose how to split the audio",
@@ -112,8 +123,19 @@ TEXTS = {
         "menu_transcribe_desc": "기존 오디오로 전사 → TTS 생성",
         "menu_generate": "🎤 음성 생성만",
         "menu_generate_desc": "기존 전사 결과로 TTS 음성만 생성",
+        "menu_postprocess": "🔊 후처리만",
+        "menu_postprocess_desc": "기존 오디오 향상 (노이즈 제거, EQ, 음량 정규화)",
         "menu_exit": "❌ 종료",
         "cancel": "❌ 취소",
+        # Post-processing
+        "postprocess_title": "후처리 설정",
+        "postprocess_subtitle": "생성된 파일에 오디오 향상 적용",
+        "postprocess_enable": "✅ 후처리 활성화",
+        "postprocess_enable_desc": "노이즈 제거, EQ, 다이나믹스, 음량 정규화 적용",
+        "postprocess_disable": "⏭️  후처리 건너뛰기",
+        "postprocess_disable_desc": "원본 TTS 출력 그대로 사용",
+        "postprocess_complete": "✨ 후처리 완료!",
+        "postprocess_files": "{n}개 파일 처리됨",
         # Split mode
         "split_title": "분할 모드 선택",
         "split_subtitle": "오디오 분할 방식을 선택하세요",
@@ -273,6 +295,7 @@ def show_main_menu() -> str | None:
         {"label": t("menu_download"), "desc": t("menu_download_desc"), "action": "download"},
         {"label": t("menu_transcribe"), "desc": t("menu_transcribe_desc"), "action": "transcribe"},
         {"label": t("menu_generate"), "desc": t("menu_generate_desc"), "action": "generate"},
+        {"label": t("menu_postprocess"), "desc": t("menu_postprocess_desc"), "action": "postprocess"},
         {"label": t("menu_exit"), "desc": "", "action": "exit"},
     ]
 
@@ -323,6 +346,24 @@ def show_split_mode_menu() -> str | None:
     if result is None or result == 2:
         return None
     return "auto" if result == 0 else "manual"
+
+
+def show_postprocess_menu() -> bool:
+    """Show post-processing enable/disable menu. Returns True if enabled."""
+    options = [
+        {"label": t("postprocess_enable"), "desc": t("postprocess_enable_desc")},
+        {"label": t("postprocess_disable"), "desc": t("postprocess_disable_desc")},
+    ]
+
+    menu = InteractiveMenu(
+        title=t("postprocess_title"),
+        subtitle=t("postprocess_subtitle"),
+        options=options
+    )
+
+    result = menu.run()
+    # Default to enabled if cancelled
+    return result is None or result == 0
 
 
 def parse_time_input(time_str: str) -> float | None:
@@ -603,7 +644,7 @@ def enhance_audio(audio: np.ndarray, sr: int) -> np.ndarray:
         return audio
 
 
-def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path, device_info: DeviceInfo):
+def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path, device_info: DeviceInfo, enable_postprocess: bool = True):
     """Generate all notification voice lines using voice cloning."""
     console.print(Panel(f"[bold]Step 6: Generate Notification Voice Lines ({device_info.device_type.value.upper()})[/bold]", style="blue"))
 
@@ -625,6 +666,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     logger.info(f"Generating {total} notification voice lines...")
     logger.info(f"Reference audio: {ref_audio_path}")
     logger.info(f"Reference text: {ref_text[:50]}...")
+    logger.info(f"Post-processing: {'enabled' if enable_postprocess else 'disabled'}")
 
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
         task = progress.add_task("Generating notifications...", total=total)
@@ -642,9 +684,12 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
 
                 # Add silence at the beginning
                 audio_with_silence, sr = add_silence(wavs[0], sr, silence_ms=300)
-                # Apply audio enhancement (denoise, EQ, dynamics, loudness)
-                enhanced_audio = enhance_audio(audio_with_silence, sr)
-                sf.write(str(output_path), enhanced_audio, sr)
+                # Apply audio enhancement if enabled
+                if enable_postprocess:
+                    final_audio = enhance_audio(audio_with_silence, sr)
+                else:
+                    final_audio = audio_with_silence
+                sf.write(str(output_path), final_audio, sr)
                 progress.advance(task)
 
     logger.success(f"All notifications generated in: {NOTIFICATIONS_DIR}")
@@ -688,7 +733,9 @@ def run_full_pipeline(url: str, device_info: DeviceInfo):
         return
     transcript = transcribe_audio(selected_segment, device_info)
     model_path = setup_tts_model()
-    generate_notifications(selected_segment, transcript, model_path, device_info)
+    # Ask about post-processing
+    enable_postprocess = show_postprocess_menu()
+    generate_notifications(selected_segment, transcript, model_path, device_info, enable_postprocess)
     show_completion()
 
 
@@ -717,7 +764,9 @@ def run_from_transcribe(device_info: DeviceInfo):
 
     transcript = transcribe_audio(clean_audio, device_info)
     model_path = setup_tts_model()
-    generate_notifications(clean_audio, transcript, model_path, device_info)
+    # Ask about post-processing
+    enable_postprocess = show_postprocess_menu()
+    generate_notifications(clean_audio, transcript, model_path, device_info, enable_postprocess)
     show_completion()
 
 
@@ -741,8 +790,49 @@ def run_generate_only(device_info: DeviceInfo):
 
     logger.info(f"Using transcript: {transcript[:50]}...")
     model_path = setup_tts_model()
-    generate_notifications(clean_audio, transcript, model_path, device_info)
+    # Ask about post-processing
+    enable_postprocess = show_postprocess_menu()
+    generate_notifications(clean_audio, transcript, model_path, device_info, enable_postprocess)
     show_completion()
+
+
+def run_postprocess_only():
+    """Run post-processing on existing notification files."""
+    console.print(Panel(f"[bold]{t('postprocess_title')}[/bold]", style="blue"))
+
+    # Check if notifications directory exists
+    if not NOTIFICATIONS_DIR.exists():
+        logger.error(f"No notifications found in {NOTIFICATIONS_DIR}")
+        logger.error("Please run 'Generate' first")
+        return
+
+    wav_files = list(NOTIFICATIONS_DIR.rglob("*.wav"))
+    if not wav_files:
+        logger.error(f"No .wav files found in {NOTIFICATIONS_DIR}")
+        return
+
+    logger.info(f"Found {len(wav_files)} audio files to process")
+
+    try:
+        from post_process import post_process_directory
+        processed = post_process_directory(
+            NOTIFICATIONS_DIR,
+            denoise=True,
+            eq=True,
+            dynamics=True,
+            loudness_normalize=True,
+            target_lufs=-14.0,
+            denoise_strength=0.6,
+        )
+        console.print(Panel.fit(
+            f"[bold green]{t('postprocess_complete')}[/bold green]\n\n"
+            f"{t('postprocess_files', n=len(processed))}\n"
+            f"Location: [cyan]{NOTIFICATIONS_DIR}[/cyan]",
+            border_style="green"
+        ))
+    except ImportError:
+        logger.error("Post-processing dependencies not installed.")
+        logger.error("Run: pixi run install-deps-mac (or install-deps-linux)")
 
 
 def main():
@@ -797,6 +887,8 @@ def main():
             run_from_transcribe(device_info)
         elif action == "generate":
             run_generate_only(device_info)
+        elif action == "postprocess":
+            run_postprocess_only()
 
         console.print("\n")
 
