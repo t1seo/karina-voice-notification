@@ -2,10 +2,16 @@
 """Generate notification voice lines using Karina's cloned voice (GPU optimized)."""
 
 import json
+import warnings
 import torch
 import soundfile as sf
+import transformers
 from pathlib import Path
 from tqdm import tqdm
+
+# Suppress transformers warnings
+transformers.logging.set_verbosity_error()
+warnings.filterwarnings("ignore", message=".*pad_token_id.*")
 
 PROJECT_ROOT = Path(__file__).parent.parent
 ASSETS_DIR = PROJECT_ROOT / "assets"

@@ -31,6 +31,12 @@ import readchar
 
 from device_utils import detect_device, print_device_info, DeviceType, DeviceInfo
 
+# Suppress transformers warnings
+import warnings
+import transformers
+transformers.logging.set_verbosity_error()
+warnings.filterwarnings("ignore", message=".*pad_token_id.*")
+
 # Setup
 console = Console()
 logger.remove()
@@ -171,23 +177,14 @@ TRANSCRIPTS_DIR = OUTPUT_DIR / "transcripts"
 NOTIFICATIONS_DIR = OUTPUT_DIR / "notifications"
 MODELS_DIR = PROJECT_ROOT / "models"
 
-# Notification lines to generate
-NOTIFICATION_LINES = {
-    "permission_prompt": [
-        {"text": "잠깐만요! 이거 실행해도 괜찮을까요? 허락해주세요~", "filename": "permission_prompt_1.wav"},
-        {"text": "잠시만요, 이 작업을 하려면 허락이 필요해요~", "filename": "permission_prompt_2.wav"},
-    ],
-    "idle_prompt": [
-        {"text": "다 끝났어요! 결과 한번 확인해주세요~", "filename": "idle_prompt_1.wav"},
-        {"text": "작업이 완료되었어요, 한번 봐주시겠어요?", "filename": "idle_prompt_2.wav"},
-    ],
-    "auth_success": [
-        {"text": "인증이 완료되었어요! 도와주셔서 정말 고마워요~", "filename": "auth_success_1.wav"},
-    ],
-    "elicitation_dialog": [
-        {"text": "여기에 입력이 필요해요! 작성해주시겠어요?", "filename": "elicitation_dialog_1.wav"},
-    ],
-}
+# Notification lines config file
+NOTIFICATION_LINES_FILE = PROJECT_ROOT / "notification_lines.json"
+
+
+def load_notification_lines() -> dict:
+    """Load notification lines from JSON file."""
+    with open(NOTIFICATION_LINES_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 # ============== Interactive Menu ==============
@@ -596,6 +593,9 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
 
     NOTIFICATIONS_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Load notification lines from JSON file
+    notification_lines = load_notification_lines()
+
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
         progress.add_task(f"Loading Qwen3-TTS 1.7B model on {device_info.device_type.value.upper()}...", total=None)
         model = Qwen3TTSModel.from_pretrained(str(model_path), dtype=device_info.dtype, attn_implementation=device_info.attn_implementation, device_map=device_info.torch_device)
@@ -603,7 +603,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     if device_info.device_type == DeviceType.MPS:
         torch.mps.synchronize()
 
-    total = sum(len(lines) for lines in NOTIFICATION_LINES.values())
+    total = sum(len(lines) for lines in notification_lines.values())
     logger.info(f"Generating {total} notification voice lines...")
     logger.info(f"Reference audio: {ref_audio_path}")
     logger.info(f"Reference text: {ref_text[:50]}...")
@@ -611,7 +611,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
         task = progress.add_task("Generating notifications...", total=total)
 
-        for notification_type, lines in NOTIFICATION_LINES.items():
+        for notification_type, lines in notification_lines.items():
             type_dir = NOTIFICATIONS_DIR / notification_type
             type_dir.mkdir(parents=True, exist_ok=True)
 
@@ -631,8 +631,8 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     table = Table(title="Generated Files", box=box.ROUNDED)
     table.add_column("Type", style="cyan")
     table.add_column("File", style="green")
-    for notification_type in NOTIFICATION_LINES.keys():
-        type_dir = OUTPUT_DIR / notification_type
+    for notification_type in notification_lines.keys():
+        type_dir = NOTIFICATIONS_DIR / notification_type
         for f in type_dir.glob("*.wav"):
             table.add_row(notification_type, f.name)
     console.print(table)
