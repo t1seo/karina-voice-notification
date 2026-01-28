@@ -299,10 +299,20 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
         console=console
     ) as progress:
         progress.add_task("Loading Qwen3-TTS 1.7B model on GPU...", total=None)
+
+        # Check if flash-attn is available
+        try:
+            import flash_attn
+            attn_impl = "flash_attention_2"
+            logger.info("Using FlashAttention2")
+        except ImportError:
+            attn_impl = "sdpa"  # PyTorch native scaled dot product attention
+            logger.warning("flash-attn not installed, using SDPA (slower)")
+
         model = Qwen3TTSModel.from_pretrained(
             str(model_path),
             dtype=torch.float16,
-            attn_implementation="flash_attention_2",
+            attn_implementation=attn_impl,
             device_map="cuda:0",
         )
 
