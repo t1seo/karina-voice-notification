@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Automated pipeline for Karina voice notification generation.
-GPU environment (A100 x 4) optimized.
+Cross-platform: Linux (CUDA) / Mac (MPS) / CPU
 
 Usage:
     python pipeline.py <youtube_url>
@@ -23,6 +23,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from rich.table import Table
+
+from device_utils import detect_device, print_device_info, DeviceType, DeviceInfo
 
 # Setup
 console = Console()
@@ -57,30 +59,18 @@ NOTIFICATION_LINES = {
 }
 
 
-def check_gpu():
-    """Check GPU availability."""
-    console.print(Panel("[bold]GPU Environment Check[/bold]", style="blue"))
+def check_device() -> DeviceInfo:
+    """Check and display device information."""
+    console.print(Panel("[bold]Device Environment Check[/bold]", style="blue"))
 
-    if not torch.cuda.is_available():
-        logger.error("CUDA is not available!")
-        sys.exit(1)
+    device_info = detect_device()
+    print_device_info(device_info)
 
-    gpu_count = torch.cuda.device_count()
-    logger.info(f"CUDA available: True")
-    logger.info(f"GPU count: {gpu_count}")
+    if not device_info.is_gpu:
+        logger.warning("No GPU detected, using CPU (will be slow)")
 
-    table = Table(title="GPU Devices")
-    table.add_column("ID", style="cyan")
-    table.add_column("Name", style="green")
-    table.add_column("Memory", style="yellow")
-
-    for i in range(gpu_count):
-        props = torch.cuda.get_device_properties(i)
-        table.add_row(str(i), props.name, f"{props.total_memory / 1024**3:.1f} GB")
-
-    console.print(table)
     console.print()
-    return gpu_count
+    return device_info
 
 
 def download_audio(url: str, output_name: str = "karina_sample") -> Path:
@@ -180,7 +170,7 @@ def select_segment(segments: list[Path]) -> Path:
         table.add_row(str(i), seg.name)
 
     console.print(table)
-    console.print("\n[dim]Play segments with: aplay <path> or paplay <path>[/dim]\n")
+    console.print("\n[dim]Play segments with: afplay <path> (Mac) or aplay <path> (Linux)[/dim]\n")
 
     while True:
         try:
@@ -205,37 +195,67 @@ def select_segment(segments: list[Path]) -> Path:
             sys.exit(1)
 
 
-def transcribe_audio(audio_path: Path) -> str:
-    """Transcribe audio using faster-whisper (GPU)."""
-    console.print(Panel("[bold]Step 4: Transcribe Audio (GPU)[/bold]", style="blue"))
-
-    from faster_whisper import WhisperModel
+def transcribe_audio(audio_path: Path, device_info: DeviceInfo) -> str:
+    """Transcribe audio using the appropriate backend for the platform."""
+    console.print(Panel(f"[bold]Step 4: Transcribe Audio ({device_info.whisper_backend})[/bold]", style="blue"))
 
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console
-    ) as progress:
-        progress.add_task("Loading Whisper large-v3 model...", total=None)
-        model = WhisperModel("large-v3", device="cuda", compute_type="float16")
+    if device_info.whisper_backend == "faster-whisper":
+        # Linux with CUDA: use faster-whisper
+        from faster_whisper import WhisperModel
 
-    logger.info(f"Transcribing: {audio_path}")
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            progress.add_task("Loading Whisper large-v3 model...", total=None)
+            compute_type = "float16" if device_info.dtype == torch.float16 else "float32"
+            model = WhisperModel("large-v3", device=device_info.device_type.value, compute_type=compute_type)
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console
-    ) as progress:
-        progress.add_task("Transcribing...", total=None)
-        segments, info = model.transcribe(str(audio_path), language="ko")
-        text = " ".join([seg.text for seg in segments])
+        logger.info(f"Transcribing: {audio_path}")
 
-    result = {"text": text, "language": info.language}
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            progress.add_task("Transcribing...", total=None)
+            segments, info = model.transcribe(str(audio_path), language="ko")
+            text = " ".join([seg.text for seg in segments])
+
+    else:
+        # Mac/CPU: use mlx-whisper
+        import mlx_whisper
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            progress.add_task("Loading Whisper large-v3 model (MLX)...", total=None)
+
+        logger.info(f"Transcribing: {audio_path}")
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            progress.add_task("Transcribing...", total=None)
+            result = mlx_whisper.transcribe(
+                str(audio_path),
+                path_or_hf_repo="mlx-community/whisper-large-v3-mlx",
+                language="ko",
+            )
+            text = result["text"]
+            info = type("Info", (), {"language": "ko"})()
+
+    result_data = {"text": text, "language": info.language}
     output_path = TRANSCRIPTS_DIR / f"{audio_path.stem}_transcript.json"
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, indent=2)
+        json.dump(result_data, f, ensure_ascii=False, indent=2)
 
     logger.success(f"Transcript saved to: {output_path}")
     console.print(Panel(f"[italic]{text}[/italic]", title="Transcript", style="green"))
@@ -288,27 +308,16 @@ def setup_tts_model():
 
 
 def post_process_audio(audio: np.ndarray, sr: int, silence_ms: int = 300) -> tuple[np.ndarray, int]:
-    """Post-process audio: add silence at beginning.
-
-    Args:
-        audio: Audio waveform
-        sr: Sample rate
-        silence_ms: Silence to add at beginning (milliseconds)
-
-    Returns:
-        Processed audio and sample rate
-    """
-    # Add silence at beginning
+    """Post-process audio: add silence at beginning."""
     silence_samples = int(sr * silence_ms / 1000)
     silence = np.zeros(silence_samples, dtype=audio.dtype)
     audio_with_silence = np.concatenate([silence, audio])
-
     return audio_with_silence, sr
 
 
-def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path):
+def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path, device_info: DeviceInfo):
     """Generate all notification voice lines using voice cloning."""
-    console.print(Panel("[bold]Step 6: Generate Notification Voice Lines[/bold]", style="blue"))
+    console.print(Panel(f"[bold]Step 6: Generate Notification Voice Lines ({device_info.device_type.value.upper()})[/bold]", style="blue"))
 
     from qwen_tts import Qwen3TTSModel
 
@@ -319,23 +328,18 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
         TextColumn("[progress.description]{task.description}"),
         console=console
     ) as progress:
-        progress.add_task("Loading Qwen3-TTS 1.7B model on GPU...", total=None)
-
-        # Check if flash-attn is available
-        try:
-            import flash_attn
-            attn_impl = "flash_attention_2"
-            logger.info("Using FlashAttention2")
-        except ImportError:
-            attn_impl = "sdpa"  # PyTorch native scaled dot product attention
-            logger.warning("flash-attn not installed, using SDPA (slower)")
+        progress.add_task(f"Loading Qwen3-TTS 1.7B model on {device_info.device_type.value.upper()}...", total=None)
 
         model = Qwen3TTSModel.from_pretrained(
             str(model_path),
-            dtype=torch.float16,
-            attn_implementation=attn_impl,
-            device_map="cuda:0",
+            dtype=device_info.dtype,
+            attn_implementation=device_info.attn_implementation,
+            device_map=device_info.torch_device,
         )
+
+    # Synchronize MPS if needed
+    if device_info.device_type == DeviceType.MPS:
+        torch.mps.synchronize()
 
     total = sum(len(lines) for lines in NOTIFICATION_LINES.values())
 
@@ -366,6 +370,10 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
                     language="korean",
                     non_streaming_mode=True,
                 )
+
+                # Synchronize MPS after generation
+                if device_info.device_type == DeviceType.MPS:
+                    torch.mps.synchronize()
 
                 # Post-process: add 300ms silence at beginning
                 processed_audio, sr = post_process_audio(wavs[0], sr, silence_ms=300)
@@ -398,13 +406,13 @@ def main():
 
     console.print(Panel.fit(
         "[bold magenta]Karina Voice Notification Generator[/bold magenta]\n"
-        "[dim]GPU Environment (A100 x 4)[/dim]",
+        "[dim]Cross-platform (CUDA / MPS / CPU)[/dim]",
         border_style="magenta"
     ))
     console.print()
 
-    # Check GPU
-    check_gpu()
+    # Check device (replaces check_gpu)
+    device_info = check_device()
 
     # Step 1: Download audio or use existing
     if args.skip_download:
@@ -426,14 +434,14 @@ def main():
     # Step 3: User selects segment
     selected_segment = select_segment(segments)
 
-    # Step 4: Transcribe
-    transcript = transcribe_audio(selected_segment)
+    # Step 4: Transcribe (pass device_info)
+    transcript = transcribe_audio(selected_segment, device_info)
 
     # Step 5: Setup TTS model
     model_path = setup_tts_model()
 
-    # Step 6: Generate notifications
-    generate_notifications(selected_segment, transcript, model_path)
+    # Step 6: Generate notifications (pass device_info)
+    generate_notifications(selected_segment, transcript, model_path, device_info)
 
     console.print(Panel.fit(
         "[bold green]Pipeline Complete![/bold green]\n\n"

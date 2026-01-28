@@ -4,8 +4,14 @@ Claude Code 알림음을 aespa 카리나 음성으로 생성하는 파이프라�
 
 ## Requirements
 
+### Linux (NVIDIA GPU)
 - GPU: NVIDIA A100 (권장) 또는 CUDA 지원 GPU
 - CUDA 12.0+
+- pixi 패키지 매니저
+
+### Mac (Apple Silicon)
+- Mac mini / MacBook with M1/M2/M3/M4 chip
+- RAM: 64GB 권장 (32GB 최소)
 - pixi 패키지 매니저
 
 ## Setup
@@ -13,24 +19,29 @@ Claude Code 알림음을 aespa 카리나 음성으로 생성하는 파이프라�
 ```bash
 # pixi 설치
 curl -fsSL https://pixi.sh/install.sh | bash
-source ~/.bashrc
+source ~/.bashrc  # or ~/.zshrc on Mac
 
 # 의존성 설치
 cd karina-tts-notification
-pixi install
+
+# Linux
+pixi install -e linux
+
+# Mac
+pixi install -e mac
 ```
 
 ## Usage
 
 ```bash
-# 기본 YouTube URL로 실행
-pixi run python scripts/pipeline.py
+# Linux
+pixi run -e linux python scripts/pipeline.py
 
-# 다른 YouTube URL로 실행
-pixi run python scripts/pipeline.py "https://youtube.com/watch?v=..."
+# Mac
+pixi run -e mac python scripts/pipeline.py
 
 # 이미 다운로드된 오디오 사용
-pixi run python scripts/pipeline.py --skip-download
+pixi run -e mac python scripts/pipeline.py --skip-download
 ```
 
 ## Pipeline Steps
