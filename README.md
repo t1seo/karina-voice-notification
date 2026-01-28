@@ -18,6 +18,8 @@ Generate Claude Code notification sounds with **aespa Karina's voice** using AI 
 
 > **What is this?** This pipeline extracts a voice sample from YouTube, transcribes it, and uses Qwen3-TTS to generate custom notification sounds that play when Claude Code needs your attention.
 
+> **Use Any Voice!** While this project defaults to Karina's voice, you can use **any YouTube video** as a voice source. Clone your favorite idol, voice actor, streamer, or even your own voice!
+
 ---
 
 ## Features
@@ -191,6 +193,17 @@ Add to `~/.claude/settings.json`:
 ---
 
 ## Customization
+
+### Use a Different Voice
+
+You can use any voice by providing a different YouTube URL:
+
+```bash
+# Use any YouTube video as voice source
+pixi run -e mac pipeline "https://youtube.com/watch?v=YOUR_VIDEO_ID"
+```
+
+The pipeline will download the audio, let you select a clean voice segment, and generate notifications in that voice.
 
 ### Change Notification Phrases
 

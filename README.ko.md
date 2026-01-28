@@ -18,6 +18,8 @@ AI 음성 복제 기술을 사용하여 **aespa 카리나 음성**으로 Claude 
 
 > **이게 뭐예요?** YouTube에서 음성 샘플을 추출하고, 전사한 뒤 Qwen3-TTS를 사용해 Claude Code가 사용자의 주의가 필요할 때 재생되는 커스텀 알림음을 생성하는 파이프라인입니다.
 
+> **어떤 음성이든 OK!** 기본값은 카리나 음성이지만, **어떤 YouTube 영상이든** 음성 소스로 사용할 수 있어요. 좋아하는 아이돌, 성우, 스트리머, 심지어 본인 목소리도 복제 가능!
+
 ---
 
 ## 주요 기능
@@ -191,6 +193,17 @@ chmod +x ~/.claude/hooks/claude_notification_hook.py
 ---
 
 ## 커스터마이징
+
+### 다른 음성 사용하기
+
+다른 YouTube URL을 제공하여 원하는 음성을 사용할 수 있습니다:
+
+```bash
+# 어떤 YouTube 영상이든 음성 소스로 사용 가능
+pixi run -e mac pipeline "https://youtube.com/watch?v=YOUR_VIDEO_ID"
+```
+
+파이프라인이 오디오를 다운로드하고, 깨끗한 음성 구간을 선택한 뒤, 해당 음성으로 알림음을 생성합니다.
 
 ### 알림 문구 변경
 
