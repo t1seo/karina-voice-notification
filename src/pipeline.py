@@ -80,11 +80,11 @@ TEXTS = {
         "postprocess_files": "Processed {n} files",
         # Source separation
         "separate_title": "Source Separation",
-        "separate_subtitle": "Remove background music from audio",
-        "separate_enable": "🎵 Enable BGM Removal",
-        "separate_enable_desc": "Use Demucs AI to extract vocals (slower but cleaner)",
+        "separate_subtitle": "⚠️  Warning: BGM in reference audio degrades voice cloning quality",
+        "separate_enable": "🎵 Enable BGM Removal (Recommended)",
+        "separate_enable_desc": "Use Demucs AI to extract vocals - cleaner reference audio",
         "separate_disable": "⏭️  Skip BGM Removal",
-        "separate_disable_desc": "Use original audio as-is",
+        "separate_disable_desc": "Use original audio (only if already clean)",
         "separate_running": "Separating vocals from background music...",
         "separate_complete": "✅ Vocals extracted successfully",
         "separate_not_installed": "Demucs not installed. Run: pip install demucs",
@@ -167,11 +167,11 @@ TEXTS = {
         "postprocess_files": "{n}개 파일 처리됨",
         # Source separation
         "separate_title": "음원 분리",
-        "separate_subtitle": "배경음악에서 보컬 추출",
-        "separate_enable": "🎵 배경음악 제거",
-        "separate_enable_desc": "Demucs AI로 보컬만 추출 (느리지만 깨끗함)",
+        "separate_subtitle": "⚠️  주의: 배경음악이 있으면 음성 복제 품질이 저하됩니다",
+        "separate_enable": "🎵 배경음악 제거 (권장)",
+        "separate_enable_desc": "Demucs AI로 보컬만 추출 - 더 깨끗한 레퍼런스 오디오",
         "separate_disable": "⏭️  배경음악 제거 건너뛰기",
-        "separate_disable_desc": "원본 오디오 그대로 사용",
+        "separate_disable_desc": "원본 오디오 사용 (이미 깨끗한 경우만)",
         "separate_running": "배경음악에서 보컬 분리 중...",
         "separate_complete": "✅ 보컬 추출 완료",
         "separate_not_installed": "Demucs가 설치되지 않았습니다. 실행: pip install demucs",
@@ -529,7 +529,9 @@ def show_source_separation_menu() -> bool:
     )
 
     result = menu.run()
-    # Default to disabled if cancelled (separation is slow)
+    # Default to enabled if cancelled - BGM degrades voice cloning quality
+    if result is None:
+        return True
     return result == 0
 
 
@@ -647,6 +649,8 @@ def separate_vocals_from_audio(input_file: Path, device_info: DeviceInfo) -> Pat
                 device=device,
                 quiet=True,
             )
+            # Normalize audio to prevent clipping warnings in TTS
+            normalize_audio_file(output_path)
             logger.success(t("separate_complete"))
             console.print()
             return output_path
@@ -776,6 +780,10 @@ def select_segment(segments: list[Path]) -> Path | None:
     final_path = CLEAN_AUDIO_DIR / "karina_clean.wav"
     shutil.copy(selected, final_path)
     logger.info(f"Copied to: {final_path}")
+
+    # Normalize audio to prevent clipping warnings in TTS
+    normalize_audio_file(final_path)
+
     console.print()
     return final_path
 
@@ -878,6 +886,24 @@ def setup_tts_model():
     logger.success("Model setup complete!")
     console.print()
     return local_dir
+
+
+def normalize_audio(audio: np.ndarray) -> np.ndarray:
+    """Normalize audio to [-1.0, 1.0] range to prevent clipping warnings."""
+    max_val = np.max(np.abs(audio))
+    if max_val > 1.0:
+        return audio / max_val
+    return audio
+
+
+def normalize_audio_file(audio_path: Path) -> None:
+    """Normalize an audio file in place to [-1.0, 1.0] range."""
+    audio, sr = sf.read(str(audio_path))
+    max_val = np.max(np.abs(audio))
+    if max_val > 1.0:
+        logger.info(f"Normalizing audio (peak: {max_val:.2f} -> 1.0)")
+        audio = audio / max_val
+        sf.write(str(audio_path), audio, sr)
 
 
 def add_silence(audio: np.ndarray, sr: int, silence_ms: int = 300) -> tuple[np.ndarray, int]:
