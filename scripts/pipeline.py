@@ -163,6 +163,50 @@ def show_segment_menu(segments: list[Path]) -> int | None:
     return result
 
 
+def show_split_mode_menu() -> str | None:
+    """Show split mode selection menu."""
+    options = [
+        {"label": "🔄 자동 분할", "desc": "30초 간격으로 자동 분할"},
+        {"label": "⏱️  수동 입력", "desc": "시작 시간을 직접 입력"},
+        {"label": "❌ 취소", "desc": ""},
+    ]
+
+    menu = InteractiveMenu(
+        title="분할 모드 선택",
+        subtitle="오디오 분할 방식을 선택하세요",
+        options=options
+    )
+
+    result = menu.run()
+    if result is None or result == 2:
+        return None
+    return "auto" if result == 0 else "manual"
+
+
+def parse_time_input(time_str: str) -> float | None:
+    """Parse time input in various formats (seconds or MM:SS)."""
+    time_str = time_str.strip()
+    if not time_str:
+        return None
+
+    # MM:SS format
+    if ":" in time_str:
+        parts = time_str.split(":")
+        if len(parts) == 2:
+            try:
+                minutes = int(parts[0])
+                seconds = float(parts[1])
+                return minutes * 60 + seconds
+            except ValueError:
+                return None
+    # Seconds only
+    else:
+        try:
+            return float(time_str)
+        except ValueError:
+            return None
+
+
 # ============== Device Check ==============
 
 def check_device() -> DeviceInfo:
@@ -213,31 +257,76 @@ def split_audio(input_file: Path, segment_duration: int = 15) -> list[Path]:
     total_duration = len(audio) / 1000
     logger.info(f"Total duration: {total_duration:.1f} seconds")
 
+    # Show split mode selection menu
+    mode = show_split_mode_menu()
+    if mode is None:
+        return []
+
     segments = []
     segment_ms = segment_duration * 1000
-    segment_starts = list(range(0, len(audio), 30000))
 
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
-        task = progress.add_task("Splitting audio...", total=len(segment_starts))
+    if mode == "manual":
+        # Manual mode: user inputs start times
+        console.print(f"\n[cyan]총 길이: {total_duration:.1f}초[/cyan]")
+        console.print("[dim]시작 시간을 입력하세요 (초 또는 MM:SS 형식, 빈 입력시 종료)[/dim]\n")
 
-        for start_ms in segment_starts:
-            end_ms = min(start_ms + segment_ms, len(audio))
-            if end_ms - start_ms < 5000:
+        while True:
+            try:
+                time_input = console.input("[bold green]시작 시간: [/bold green]")
+                if not time_input.strip():
+                    break
+
+                start_sec = parse_time_input(time_input)
+                if start_sec is None:
+                    console.print("[red]잘못된 형식입니다. 예: 30, 1:30, 90.5[/red]")
+                    continue
+
+                if start_sec < 0 or start_sec >= total_duration:
+                    console.print(f"[red]범위를 벗어났습니다 (0 ~ {total_duration:.1f}초)[/red]")
+                    continue
+
+                start_ms = int(start_sec * 1000)
+                end_ms = min(start_ms + segment_ms, len(audio))
+
+                segment = audio[start_ms:end_ms]
+                segment = segment.normalize()
+                segment = segment.set_frame_rate(16000).set_channels(1)
+
+                end_sec = end_ms / 1000
+                filename = f"segment_{int(start_sec)}s_{int(end_sec)}s.wav"
+                output_path = CLEAN_AUDIO_DIR / filename
+
+                segment.export(output_path, format="wav")
+                segments.append(output_path)
+                logger.success(f"Created: {filename} ({end_sec - start_sec:.1f}초)")
+
+            except KeyboardInterrupt:
+                break
+    else:
+        # Auto mode: split at 30-second intervals
+        segment_starts = list(range(0, len(audio), 30000))
+
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
+            task = progress.add_task("Splitting audio...", total=len(segment_starts))
+
+            for start_ms in segment_starts:
+                end_ms = min(start_ms + segment_ms, len(audio))
+                if end_ms - start_ms < 5000:
+                    progress.advance(task)
+                    continue
+
+                segment = audio[start_ms:end_ms]
+                segment = segment.normalize()
+                segment = segment.set_frame_rate(16000).set_channels(1)
+
+                start_sec = start_ms // 1000
+                end_sec = end_ms // 1000
+                filename = f"segment_{start_sec}s_{end_sec}s.wav"
+                output_path = CLEAN_AUDIO_DIR / filename
+
+                segment.export(output_path, format="wav")
+                segments.append(output_path)
                 progress.advance(task)
-                continue
-
-            segment = audio[start_ms:end_ms]
-            segment = segment.normalize()
-            segment = segment.set_frame_rate(16000).set_channels(1)
-
-            start_sec = start_ms // 1000
-            end_sec = end_ms // 1000
-            filename = f"segment_{start_sec}s_{end_sec}s.wav"
-            output_path = CLEAN_AUDIO_DIR / filename
-
-            segment.export(output_path, format="wav")
-            segments.append(output_path)
-            progress.advance(task)
 
     logger.success(f"Created {len(segments)} segments")
     console.print()
