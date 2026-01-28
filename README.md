@@ -1,19 +1,17 @@
 # Karina Voice Notification Generator
 
 <p align="center">
-  <img src="assets/karina.jpg" alt="Karina" width="800">
-</p>
-
-<p align="center">
   <img src="https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/platform-Linux%20|%20macOS-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/GPU-CUDA%2012.0%2B%20|%20Apple%20Silicon-green" alt="GPU">
   <img src="https://img.shields.io/badge/TTS-Qwen3--TTS%201.7B-orange" alt="TTS Model">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
+  <br>
+  <a href="README.ko.md"><img src="https://img.shields.io/badge/lang-한국어-red" alt="Korean"></a>
 </p>
 
 <p align="center">
-  <a href="README.ko.md">한국어</a>
+  <img src="assets/karina.jpg" alt="Karina" width="800">
 </p>
 
 Generate Claude Code notification sounds with **aespa Karina's voice** using AI voice cloning technology.
