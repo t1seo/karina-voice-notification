@@ -1,16 +1,19 @@
 # Karina Voice Notification Generator
 
 <p align="center">
+  <img src="https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/platform-Linux%20|%20macOS-lightgrey" alt="Platform">
+  <img src="https://img.shields.io/badge/GPU-CUDA%2012.0%2B%20|%20Apple%20Silicon-green" alt="GPU">
+  <img src="https://img.shields.io/badge/TTS-Qwen3--TTS%201.7B-orange" alt="TTS Model">
+  <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
   <a href="README.ko.md"><img src="https://img.shields.io/badge/README-한국어-red" alt="Korean"></a>
 </p>
 
 <p align="center">
-  <img src="assets/karina.jpg" alt="Karina" width="600">
+  <img src="assets/karina.jpg" alt="Karina" width="800">
 </p>
 
-Generate Claude Code notification sounds with **any voice** from YouTube videos.
-
----
+> Generate Claude Code notification sounds with **any voice** from YouTube videos.
 
 ## Quick Start
 
@@ -46,16 +49,12 @@ In Claude Code, run:
 
 This skill automatically copies sounds and configures hooks for you.
 
----
-
 ## Requirements
 
 | Platform | Requirements |
 |----------|-------------|
 | **macOS** | Apple Silicon (M1+), 32GB+ RAM, [pixi](https://pixi.sh) |
 | **Linux** | NVIDIA GPU, CUDA 12.0+, [pixi](https://pixi.sh) |
-
----
 
 ## Tips for Best Results
 
@@ -67,8 +66,6 @@ This skill automatically copies sounds and configures hooks for you.
 - Noisy environments, multiple speakers
 - Clips shorter than 5 seconds
 
----
-
 ## Customization
 
 Edit `notification_lines.json` to change notification phrases:
@@ -76,8 +73,6 @@ Edit `notification_lines.json` to change notification phrases:
 ```json
 {"text": "Your custom phrase here", "filename": "permission_prompt_1.wav"}
 ```
-
----
 
 ## How It Works
 
@@ -92,8 +87,6 @@ YouTube → Download → [BGM Removal] → Split → Select → Transcribe → V
 | Transcription | Whisper large-v3 |
 | Voice Cloning | Qwen3-TTS 1.7B |
 
----
-
 ## Troubleshooting
 
 | Problem | Solution |
@@ -101,8 +94,6 @@ YouTube → Download → [BGM Removal] → Split → Select → Transcribe → V
 | Poor voice quality | Use cleaner source, enable BGM Removal |
 | Hook not playing | Check `~/.claude/sounds/` exists, verify permissions |
 | Missing dependencies | Run `pixi run install-deps-mac` or `install-deps-linux` |
-
----
 
 ## License
 

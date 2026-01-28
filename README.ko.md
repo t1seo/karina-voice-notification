@@ -1,16 +1,19 @@
 # Karina Voice Notification Generator
 
 <p align="center">
+  <img src="https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/platform-Linux%20|%20macOS-lightgrey" alt="Platform">
+  <img src="https://img.shields.io/badge/GPU-CUDA%2012.0%2B%20|%20Apple%20Silicon-green" alt="GPU">
+  <img src="https://img.shields.io/badge/TTS-Qwen3--TTS%201.7B-orange" alt="TTS Model">
+  <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
   <a href="README.md"><img src="https://img.shields.io/badge/README-English-blue" alt="English"></a>
 </p>
 
 <p align="center">
-  <img src="assets/karina.jpg" alt="Karina" width="600">
+  <img src="assets/karina.jpg" alt="Karina" width="800">
 </p>
 
 YouTube 영상에서 **원하는 목소리**로 Claude Code 알림음을 생성합니다.
-
----
 
 ## 빠른 시작
 
@@ -46,16 +49,12 @@ Claude Code에서 실행:
 
 이 스킬이 자동으로 음성 파일을 복사하고 Hook을 설정합니다.
 
----
-
 ## 요구 사항
 
 | 플랫폼 | 요구 사항 |
 |--------|----------|
 | **macOS** | Apple Silicon (M1+), 32GB+ RAM, [pixi](https://pixi.sh) |
 | **Linux** | NVIDIA GPU, CUDA 12.0+, [pixi](https://pixi.sh) |
-
----
 
 ## 좋은 결과를 위한 팁
 
@@ -67,8 +66,6 @@ Claude Code에서 실행:
 - 시끄러운 환경, 여러 명이 말하는 영상
 - 5초 미만의 짧은 클립
 
----
-
 ## 커스터마이징
 
 `notification_lines.json`을 수정하여 알림 문구 변경:
@@ -76,8 +73,6 @@ Claude Code에서 실행:
 ```json
 {"text": "원하는 문구를 여기에", "filename": "permission_prompt_1.wav"}
 ```
-
----
 
 ## 작동 원리
 
@@ -92,8 +87,6 @@ YouTube → 다운로드 → [BGM 제거] → 분할 → 선택 → 전사 → �
 | 전사 | Whisper large-v3 |
 | 음성 복제 | Qwen3-TTS 1.7B |
 
----
-
 ## 문제 해결
 
 | 문제 | 해결 방법 |
@@ -101,8 +94,6 @@ YouTube → 다운로드 → [BGM 제거] → 분할 → 선택 → 전사 → �
 | 음성 품질 저하 | 더 깨끗한 소스 사용, BGM 제거 활성화 |
 | Hook 소리 안남 | `~/.claude/sounds/` 확인, 권한 확인 |
 | 의존성 오류 | `pixi run install-deps-mac` 또는 `install-deps-linux` 실행 |
-
----
 
 ## 라이선스
 
