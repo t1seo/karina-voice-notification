@@ -38,8 +38,8 @@ huggingface-hub = ">=0.20.0"
 loguru = ">=0.7.0"
 rich = ">=13.0.0"
 
-# Optional: FlashAttention2 for faster inference (may fail on some systems)
-# flash-attn = ">=2.0.0"
+# FlashAttention2 for faster inference (A100 optimized)
+flash-attn = ">=2.0.0"
 
 [tasks]
 download = "python scripts/download_audio.py"
