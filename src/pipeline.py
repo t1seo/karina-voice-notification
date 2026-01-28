@@ -83,6 +83,9 @@ TEXTS = {
         "separate_running": "Separating vocals from background music...",
         "separate_complete": "✅ Vocals extracted successfully",
         "separate_not_installed": "Demucs not installed. Run: pip install demucs",
+        # TTS Language
+        "tts_lang_title": "TTS Language",
+        "tts_lang_subtitle": "Select the language for generated voice",
         # Split mode
         "split_title": "Split Mode",
         "split_subtitle": "Choose how to split the audio",
@@ -156,6 +159,9 @@ TEXTS = {
         "separate_running": "배경음악에서 보컬 분리 중...",
         "separate_complete": "✅ 보컬 추출 완료",
         "separate_not_installed": "Demucs가 설치되지 않았습니다. 실행: pip install demucs",
+        # TTS Language
+        "tts_lang_title": "TTS 언어",
+        "tts_lang_subtitle": "생성할 음성의 언어를 선택하세요",
         # Split mode
         "split_title": "분할 모드 선택",
         "split_subtitle": "오디오 분할 방식을 선택하세요",
@@ -384,6 +390,40 @@ def show_postprocess_menu() -> bool:
     result = menu.run()
     # Default to enabled if cancelled
     return result is None or result == 0
+
+
+# Qwen3-TTS supported languages (Korean and English first, then alphabetical)
+TTS_LANGUAGES = [
+    {"code": "korean", "name": "Korean", "flag": "🇰🇷"},
+    {"code": "english", "name": "English", "flag": "🇺🇸"},
+    {"code": "chinese", "name": "Chinese", "flag": "🇨🇳"},
+    {"code": "french", "name": "French", "flag": "🇫🇷"},
+    {"code": "german", "name": "German", "flag": "🇩🇪"},
+    {"code": "italian", "name": "Italian", "flag": "🇮🇹"},
+    {"code": "japanese", "name": "Japanese", "flag": "🇯🇵"},
+    {"code": "portuguese", "name": "Portuguese", "flag": "🇵🇹"},
+    {"code": "russian", "name": "Russian", "flag": "🇷🇺"},
+    {"code": "spanish", "name": "Spanish", "flag": "🇪🇸"},
+]
+
+
+def show_tts_language_menu() -> str:
+    """Show TTS language selection menu. Returns language code."""
+    options = [
+        {"label": f"{lang['flag']} {lang['name']}", "desc": ""}
+        for lang in TTS_LANGUAGES
+    ]
+
+    menu = InteractiveMenu(
+        title=t("tts_lang_title"),
+        subtitle=t("tts_lang_subtitle"),
+        options=options
+    )
+
+    result = menu.run()
+    if result is None:
+        return "korean"  # Default
+    return TTS_LANGUAGES[result]["code"]
 
 
 def show_source_separation_menu() -> bool:
@@ -726,7 +766,7 @@ def enhance_audio(audio: np.ndarray, sr: int) -> np.ndarray:
         return audio
 
 
-def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path, device_info: DeviceInfo, enable_postprocess: bool = True):
+def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path, device_info: DeviceInfo, enable_postprocess: bool = True, tts_language: str = "korean"):
     """Generate all notification voice lines using voice cloning."""
     console.print(Panel(f"[bold]Step 6: Generate Notification Voice Lines ({device_info.device_type.value.upper()})[/bold]", style="blue"))
 
@@ -748,6 +788,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     logger.info(f"Generating {total} notification voice lines...")
     logger.info(f"Reference audio: {ref_audio_path}")
     logger.info(f"Reference text: {ref_text[:50]}...")
+    logger.info(f"TTS language: {tts_language}")
     logger.info(f"Post-processing: {'enabled' if enable_postprocess else 'disabled'}")
 
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
@@ -759,7 +800,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
 
             for line in lines:
                 output_path = type_dir / line["filename"]
-                wavs, sr = model.generate_voice_clone(text=line["text"], ref_audio=str(ref_audio_path), ref_text=ref_text, language="korean", non_streaming_mode=True)
+                wavs, sr = model.generate_voice_clone(text=line["text"], ref_audio=str(ref_audio_path), ref_text=ref_text, language=tts_language, non_streaming_mode=True)
 
                 if device_info.device_type == DeviceType.MPS:
                     torch.mps.synchronize()
@@ -819,9 +860,11 @@ def run_full_pipeline(url: str, device_info: DeviceInfo):
         return
     transcript = transcribe_audio(selected_segment, device_info)
     model_path = setup_tts_model()
+    # Ask about TTS language
+    tts_language = show_tts_language_menu()
     # Ask about post-processing
     enable_postprocess = show_postprocess_menu()
-    generate_notifications(selected_segment, transcript, model_path, device_info, enable_postprocess)
+    generate_notifications(selected_segment, transcript, model_path, device_info, enable_postprocess, tts_language)
     show_completion()
 
 
@@ -854,9 +897,11 @@ def run_from_transcribe(device_info: DeviceInfo):
 
     transcript = transcribe_audio(clean_audio, device_info)
     model_path = setup_tts_model()
+    # Ask about TTS language
+    tts_language = show_tts_language_menu()
     # Ask about post-processing
     enable_postprocess = show_postprocess_menu()
-    generate_notifications(clean_audio, transcript, model_path, device_info, enable_postprocess)
+    generate_notifications(clean_audio, transcript, model_path, device_info, enable_postprocess, tts_language)
     show_completion()
 
 
@@ -880,9 +925,11 @@ def run_generate_only(device_info: DeviceInfo):
 
     logger.info(f"Using transcript: {transcript[:50]}...")
     model_path = setup_tts_model()
+    # Ask about TTS language
+    tts_language = show_tts_language_menu()
     # Ask about post-processing
     enable_postprocess = show_postprocess_menu()
-    generate_notifications(clean_audio, transcript, model_path, device_info, enable_postprocess)
+    generate_notifications(clean_audio, transcript, model_path, device_info, enable_postprocess, tts_language)
     show_completion()
 
 

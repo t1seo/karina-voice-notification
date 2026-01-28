@@ -46,13 +46,14 @@ def generate_cloned_voice(
     ref_text: str,
     output_path: Path,
     post_process: bool = True,
+    language: str = "korean",
 ):
     """Generate speech with cloned voice."""
     wavs, sr = model.generate_voice_clone(
         text=text,
         ref_audio=str(ref_audio_path),
         ref_text=ref_text,
-        language="korean",
+        language=language,
         non_streaming_mode=True,
     )
 
