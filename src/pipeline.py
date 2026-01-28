@@ -88,7 +88,7 @@ TEXTS = {
         "out_of_range": "Out of range",
         "created_segments": "Created {n} segments",
         "preview_tip": "💡 Tip: Preview with 'afplay <path>' (Mac) or 'aplay <path>' (Linux)",
-        "youtube_url_prompt": "YouTube URL (Enter for default): ",
+        "youtube_url_prompt": "Enter for default",
         "audio_ready": "✅ Audio Ready!",
         "pipeline_complete": "✨ Pipeline Complete!",
         "next_steps": "Next steps:",
@@ -140,7 +140,7 @@ TEXTS = {
         "out_of_range": "범위를 벗어났습니다",
         "created_segments": "{n}개의 세그먼트 생성됨",
         "preview_tip": "💡 Tip: 터미널에서 'afplay <path>' (Mac) 또는 'aplay <path>' (Linux)로 미리듣기",
-        "youtube_url_prompt": "YouTube URL (Enter시 기본값 사용): ",
+        "youtube_url_prompt": "Enter시 기본값 사용",
         "audio_ready": "✅ 오디오 준비 완료!",
         "pipeline_complete": "✨ 파이프라인 완료!",
         "next_steps": "다음 단계:",
@@ -767,10 +767,10 @@ def main():
             console.print(f"\n[dim]{t('bye')}[/dim]")
             break
         elif action == "full":
-            url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] ({t('youtube_url_prompt')}): ").strip() or args.url
+            url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] [dim]({t('youtube_url_prompt')})[/dim]: ").strip() or args.url
             run_full_pipeline(url, device_info)
         elif action == "download":
-            url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] ({t('youtube_url_prompt')}): ").strip() or args.url
+            url = console.input(f"\n[bold yellow]YouTube URL[/bold yellow] [dim]({t('youtube_url_prompt')})[/dim]: ").strip() or args.url
             run_download_only(url)
         elif action == "transcribe":
             run_from_transcribe(device_info)
