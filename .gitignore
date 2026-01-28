@@ -4,8 +4,8 @@
 # Models (too large for git)
 models/
 
-# Output files
-output/
+# Output checkpoints (keep generated audio)
+output/**/.ipynb_checkpoints/
 
 # Python
 __pycache__/

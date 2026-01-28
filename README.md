@@ -28,6 +28,9 @@ pixi run python scripts/pipeline.py
 
 # 다른 YouTube URL로 실행
 pixi run python scripts/pipeline.py "https://youtube.com/watch?v=..."
+
+# 이미 다운로드된 오디오 사용
+pixi run python scripts/pipeline.py --skip-download
 ```
 
 ## Pipeline Steps
@@ -44,38 +47,125 @@ pixi run python scripts/pipeline.py "https://youtube.com/watch?v=..."
 
 | 유형 | 문구 | 파일 |
 |------|------|------|
-| permission_prompt | 잠깐요! 이거 해도 될까요? | `permission_prompt_1.wav` |
-| | 허락이 필요해요~ | `permission_prompt_2.wav` |
-| idle_prompt | 다 했어요! 확인해주세요~ | `idle_prompt_1.wav` |
-| | 끝났어요, 봐주세요! | `idle_prompt_2.wav` |
-| auth_success | 인증 완료! 고마워요~ | `auth_success_1.wav` |
-| elicitation_dialog | 여기 입력이 필요해요! | `elicitation_dialog_1.wav` |
+| permission_prompt | 잠깐만요! 이거 실행해도 괜찮을까요? 허락해주세요~ | `permission_prompt_1.wav` |
+| | 잠시만요, 이 작업을 하려면 허락이 필요해요~ | `permission_prompt_2.wav` |
+| idle_prompt | 다 끝났어요! 결과 한번 확인해주세요~ | `idle_prompt_1.wav` |
+| | 작업이 완료되었어요, 한번 봐주시겠어요? | `idle_prompt_2.wav` |
+| auth_success | 인증이 완료되었어요! 도와주셔서 정말 고마워요~ | `auth_success_1.wav` |
+| elicitation_dialog | 여기에 입력이 필요해요! 작성해주시겠어요? | `elicitation_dialog_1.wav` |
 
-생성된 파일: `output/notifications/`
+생성된 파일: `output/`
 
-## Claude Code 설정
+---
+
+## Claude Code 알림 설정
+
+### 1. 음성 파일 복사
 
 ```bash
-# 알림음 복사
 mkdir -p ~/.claude/sounds
-cp output/notifications/*/*.wav ~/.claude/sounds/
+cp output/*/*.wav ~/.claude/sounds/
+```
 
-# hooks 설정 (~/.claude/settings.json)
+### 2. hooks 설정
+
+`~/.claude/settings.json` 파일에 다음 내용 추가:
+
+```json
 {
   "hooks": {
-    "notification": [
+    "Notification": [
       {
-        "event": "permission_prompt",
-        "command": "afplay ~/.claude/sounds/permission_prompt_1.wav"
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay ~/.claude/sounds/permission_prompt_1.wav",
+            "timeout": 10
+          }
+        ]
       },
       {
-        "event": "idle_prompt",
-        "command": "afplay ~/.claude/sounds/idle_prompt_1.wav"
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay ~/.claude/sounds/idle_prompt_1.wav",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "auth_success",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay ~/.claude/sounds/auth_success_1.wav",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "elicitation_dialog",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay ~/.claude/sounds/elicitation_dialog_1.wav",
+            "timeout": 10
+          }
+        ]
       }
     ]
   }
 }
 ```
+
+### 3. 알림 유형 설명
+
+| Hook Matcher | 발생 시점 |
+|--------------|----------|
+| `permission_prompt` | Claude가 위험한 명령 실행 전 허락을 구할 때 |
+| `idle_prompt` | 작업 완료 후 사용자 응답을 기다릴 때 |
+| `auth_success` | 인증 성공 시 |
+| `elicitation_dialog` | 사용자 입력이 필요할 때 |
+
+### 4. Linux에서 사용
+
+macOS의 `afplay` 대신 Linux에서는:
+
+```bash
+# aplay 사용
+"command": "aplay ~/.claude/sounds/permission_prompt_1.wav"
+
+# 또는 paplay (PulseAudio)
+"command": "paplay ~/.claude/sounds/permission_prompt_1.wav"
+```
+
+---
+
+## 알림 메시지 커스터마이징
+
+### 문구 변경
+
+`notification_lines.json` 파일 수정:
+
+```json
+{
+  "permission_prompt": [
+    {"text": "새로운 문구를 여기에 입력하세요", "filename": "permission_prompt_1.wav"}
+  ]
+}
+```
+
+### 새 음성 생성
+
+문구 수정 후 파이프라인 재실행:
+
+```bash
+pixi run python scripts/pipeline.py --skip-download
+```
+
+---
 
 ## Project Structure
 
@@ -93,20 +183,8 @@ karina-tts-notification/
 │   ├── clean/                # 정제된 오디오
 │   └── transcripts/          # 전사 결과
 ├── models/                   # TTS 모델 (자동 다운로드)
-├── output/notifications/     # 생성된 알림음
+├── output/                   # 생성된 알림음
 ├── notification_lines.json   # 알림 문구 설정
 ├── pixi.toml                 # 의존성 설정
 └── pixi.lock
-```
-
-## Customization
-
-알림 문구 수정: `notification_lines.json` 편집
-
-```json
-{
-  "permission_prompt": [
-    {"text": "새로운 문구", "filename": "permission_prompt_1.wav"}
-  ]
-}
 ```
