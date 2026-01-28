@@ -1,7 +1,15 @@
 # Karina Voice Notification Generator
 
 <p align="center">
-  <img src="assets/karina.jpg" alt="Karina" width="640">
+  <img src="assets/karina.jpg" alt="Karina" width="800">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/platform-Linux%20|%20macOS-lightgrey" alt="Platform">
+  <img src="https://img.shields.io/badge/GPU-CUDA%2012.0%2B%20|%20Apple%20Silicon-green" alt="GPU">
+  <img src="https://img.shields.io/badge/TTS-Qwen3--TTS%201.7B-orange" alt="TTS Model">
+  <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
 </p>
 
 Claude Code 알림음을 aespa 카리나 음성으로 생성하는 파이프라인.
@@ -198,3 +206,7 @@ karina-tts-notification/
 ├── pixi.toml                 # 의존성 설정
 └── pixi.lock
 ```
+
+## License
+
+MIT License
