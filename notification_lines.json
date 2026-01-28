@@ -1,7 +1,7 @@
 {
   "permission_prompt": [
     {
-      "text": "오빠, 잠깐! 이거 해도 돼?",
+      "text": "잠깐! 이거 해도 돼?",
       "filename": "permission_prompt_1.wav"
     },
     {
@@ -11,7 +11,7 @@
   ],
   "idle_prompt": [
     {
-      "text": "오빠, 다 했어! 확인해줘~",
+      "text": "다 했어! 확인해줘~",
       "filename": "idle_prompt_1.wav"
     },
     {
