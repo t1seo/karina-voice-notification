@@ -101,7 +101,7 @@ Raw TTS 출력
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-repo/project-karina-voice.git
+git clone https://github.com/t1seo/karina-voice-notification.git
 cd project-karina-voice
 
 # 의존성 설치
@@ -152,19 +152,6 @@ pixi run pipeline
 - 여러 명이 말하는 영상
 
 참조 오디오는 **5-15초**의 깨끗한 음성이어야 합니다.
-
----
-
-## 생성되는 알림
-
-파이프라인은 Claude Code 이벤트에 대한 알림음을 생성합니다:
-
-| 이벤트 | 재생 시점 | 변형 개수 |
-|--------|----------|-----------|
-| `permission_prompt` | Claude가 위험한 명령 실행 전 허락을 구할 때 | 10 |
-| `idle_prompt` | 작업 완료 후 대기 중일 때 | 20 |
-| `auth_success` | 인증 성공 시 | 10 |
-| `elicitation_dialog` | 사용자 입력이 필요할 때 | 10 |
 
 ---
 

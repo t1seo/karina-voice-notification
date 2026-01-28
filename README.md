@@ -101,7 +101,7 @@ Final Output
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo/project-karina-voice.git
+git clone https://github.com/t1seo/karina-voice-notification.git
 cd project-karina-voice
 
 # Install dependencies
@@ -152,19 +152,6 @@ Supports all languages above with automatic detection or manual selection.
 - Multiple speakers
 
 The reference audio should be **5-15 seconds** of clear speech.
-
----
-
-## Generated Notifications
-
-The pipeline generates notification sounds for Claude Code events:
-
-| Event | When it plays | Variations |
-|-------|---------------|------------|
-| `permission_prompt` | Claude asks permission before risky commands | 10 |
-| `idle_prompt` | Task complete, waiting for response | 20 |
-| `auth_success` | Authentication successful | 10 |
-| `elicitation_dialog` | User input required | 10 |
 
 ---
 
