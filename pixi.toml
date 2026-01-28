@@ -46,8 +46,15 @@ mlx = ">=0.5.0"
 mlx-whisper = ">=0.4.0"
 
 [environments]
-linux = ["linux"]
-mac = ["mac"]
+default = { features = ["linux"], platforms = ["linux-64"] }
+linux = { features = ["linux"], platforms = ["linux-64"] }
+mac = { features = ["mac"], platforms = ["osx-arm64"] }
 
 [tasks]
 pipeline = "python scripts/pipeline.py"
+
+[target.osx-arm64.tasks]
+pipeline = "python scripts/pipeline.py"
+
+[activation]
+scripts = ["scripts/activate.sh"]

@@ -38,12 +38,12 @@ logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level: <
 
 # Project paths
 PROJECT_ROOT = Path(__file__).parent.parent
-ASSETS_DIR = PROJECT_ROOT / "assets"
-RAW_AUDIO_DIR = ASSETS_DIR / "raw"
-CLEAN_AUDIO_DIR = ASSETS_DIR / "clean"
-TRANSCRIPTS_DIR = ASSETS_DIR / "transcripts"
+OUTPUT_DIR = PROJECT_ROOT / "output"
+RAW_AUDIO_DIR = OUTPUT_DIR / "raw"
+CLEAN_AUDIO_DIR = OUTPUT_DIR / "clean"
+TRANSCRIPTS_DIR = OUTPUT_DIR / "transcripts"
+NOTIFICATIONS_DIR = OUTPUT_DIR / "notifications"
 MODELS_DIR = PROJECT_ROOT / "models"
-OUTPUT_DIR = PROJECT_ROOT / "output" / "notifications"
 
 # Notification lines to generate
 NOTIFICATION_LINES = {

@@ -1,5 +1,7 @@
 # Karina Voice Notification Generator
 
+<img src="assets/karina.jpg" alt="Karina" width="640">
+
 Claude Code 알림음을 aespa 카리나 음성으로 생성하는 파이프라인.
 
 ## Requirements
