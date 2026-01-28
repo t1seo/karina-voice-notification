@@ -3,10 +3,11 @@
 
 import json
 import warnings
-import torch
-import soundfile as sf
-import transformers
 from pathlib import Path
+
+import soundfile as sf
+import torch
+import transformers
 from tqdm import tqdm
 
 # Suppress transformers warnings
@@ -64,6 +65,7 @@ def generate_cloned_voice(
     if post_process and ENABLE_POST_PROCESSING:
         try:
             from post_process import post_process_file
+
             post_process_file(
                 output_path,
                 denoise=True,
@@ -83,7 +85,7 @@ def generate_all_notifications(ref_audio_path: Path, ref_text: str):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Load notification lines
-    with open(NOTIFICATION_LINES_FILE, "r", encoding="utf-8") as f:
+    with open(NOTIFICATION_LINES_FILE, encoding="utf-8") as f:
         notification_lines = json.load(f)
 
     # Load model
@@ -106,7 +108,7 @@ def generate_all_notifications(ref_audio_path: Path, ref_text: str):
                     text=line["text"],
                     ref_audio_path=ref_audio_path,
                     ref_text=ref_text,
-                    output_path=output_path
+                    output_path=output_path,
                 )
                 print(f"Saved: {output_path}")
                 pbar.update(1)
@@ -130,7 +132,7 @@ if __name__ == "__main__":
         print(f"Error: Transcript not found: {transcript_file}")
         sys.exit(1)
 
-    with open(transcript_file, "r", encoding="utf-8") as f:
+    with open(transcript_file, encoding="utf-8") as f:
         transcript_data = json.load(f)
     ref_text = transcript_data["text"]
 

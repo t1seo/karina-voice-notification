@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """Extract clean voice segment from audio file."""
 
-from pathlib import Path
-from pydub import AudioSegment
 import sys
+from pathlib import Path
+
+from pydub import AudioSegment
 
 PROJECT_ROOT = Path(__file__).parent.parent
 ASSETS_DIR = PROJECT_ROOT / "assets"
 RAW_AUDIO_DIR = ASSETS_DIR / "raw"
 CLEAN_AUDIO_DIR = ASSETS_DIR / "clean"
 
+
 def extract_segment(
-    input_file: Path,
-    start_ms: int,
-    end_ms: int,
-    output_name: str = "karina_clean"
+    input_file: Path, start_ms: int, end_ms: int, output_name: str = "karina_clean"
 ) -> Path:
     """Extract a segment from audio file.
 
@@ -47,6 +46,7 @@ def extract_segment(
     print(f"Extracted {duration_sec:.1f}s segment to: {output_path}")
 
     return output_path
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:

@@ -7,6 +7,38 @@
     {
       "text": "잠시만요, 이 작업을 하려면 허락이 필요해요~",
       "filename": "permission_prompt_2.wav"
+    },
+    {
+      "text": "이거 좀 위험할 수 있어요! 확인해주시겠어요?",
+      "filename": "permission_prompt_3.wav"
+    },
+    {
+      "text": "앗, 여기서 멈췄어요! 허락해주셔야 진행할 수 있어요~",
+      "filename": "permission_prompt_4.wav"
+    },
+    {
+      "text": "이 명령어 실행해도 될까요? 허락 부탁드려요!",
+      "filename": "permission_prompt_5.wav"
+    },
+    {
+      "text": "잠깐! 이건 확인이 필요해요~ 괜찮으시면 허락해주세요!",
+      "filename": "permission_prompt_6.wav"
+    },
+    {
+      "text": "혹시 이거 해도 되는 거 맞죠? 허락해주세요~",
+      "filename": "permission_prompt_7.wav"
+    },
+    {
+      "text": "음... 이건 좀 신중해야 할 것 같아요! 확인 부탁드려요!",
+      "filename": "permission_prompt_8.wav"
+    },
+    {
+      "text": "잠깐 멈췄어요! 이거 실행하기 전에 허락이 필요해요~",
+      "filename": "permission_prompt_9.wav"
+    },
+    {
+      "text": "이 작업은 제가 마음대로 못해요! 허락해주실래요?",
+      "filename": "permission_prompt_10.wav"
     }
   ],
   "idle_prompt": [
@@ -17,18 +49,162 @@
     {
       "text": "작업이 완료되었어요, 한번 봐주시겠어요?",
       "filename": "idle_prompt_2.wav"
+    },
+    {
+      "text": "완료! 제가 잘 했는지 확인해주세요~",
+      "filename": "idle_prompt_3.wav"
+    },
+    {
+      "text": "끝났어요! 다음 지시를 기다리고 있을게요~",
+      "filename": "idle_prompt_4.wav"
+    },
+    {
+      "text": "모든 작업이 끝났어요! 이제 뭐 할까요?",
+      "filename": "idle_prompt_5.wav"
+    },
+    {
+      "text": "여기까지 완료! 결과 확인하시고 다음 단계 알려주세요~",
+      "filename": "idle_prompt_6.wav"
+    },
+    {
+      "text": "짜잔~ 다 했어요! 어떤가요?",
+      "filename": "idle_prompt_7.wav"
+    },
+    {
+      "text": "완료했어요! 마음에 드셨으면 좋겠어요~",
+      "filename": "idle_prompt_8.wav"
+    },
+    {
+      "text": "여기서 잠깐 쉬고 있을게요! 불러주시면 바로 갈게요~",
+      "filename": "idle_prompt_9.wav"
+    },
+    {
+      "text": "작업 끝! 혹시 수정할 부분 있으면 말씀해주세요~",
+      "filename": "idle_prompt_10.wav"
+    },
+    {
+      "text": "이제 저 쉬어도 되죠? 필요하면 불러주세요!",
+      "filename": "idle_prompt_11.wav"
+    },
+    {
+      "text": "휴~ 드디어 끝났어요! 다음은 뭘 도와드릴까요?",
+      "filename": "idle_prompt_12.wav"
+    },
+    {
+      "text": "완료! 저 여기서 대기하고 있을게요~",
+      "filename": "idle_prompt_13.wav"
+    },
+    {
+      "text": "끝났어요! 결과가 괜찮은지 한번 봐주세요~",
+      "filename": "idle_prompt_14.wav"
+    },
+    {
+      "text": "작업 완료했어요! 다른 거 더 할 거 있으세요?",
+      "filename": "idle_prompt_15.wav"
+    },
+    {
+      "text": "다 됐어요! 저 잘했죠? 확인해주세요~",
+      "filename": "idle_prompt_16.wav"
+    },
+    {
+      "text": "여기까지예요! 다음 할 일 있으면 말씀해주세요~",
+      "filename": "idle_prompt_17.wav"
+    },
+    {
+      "text": "완료! 이제 뭐 해볼까요? 기다리고 있을게요~",
+      "filename": "idle_prompt_18.wav"
+    },
+    {
+      "text": "끝! 결과 마음에 드셨으면 좋겠어요~ 다음은요?",
+      "filename": "idle_prompt_19.wav"
+    },
+    {
+      "text": "모두 완료했어요! 필요한 거 있으면 언제든 불러주세요~",
+      "filename": "idle_prompt_20.wav"
     }
   ],
   "auth_success": [
     {
       "text": "인증이 완료되었어요! 도와주셔서 정말 고마워요~",
       "filename": "auth_success_1.wav"
+    },
+    {
+      "text": "인증 성공! 이제 진행할 수 있어요~",
+      "filename": "auth_success_2.wav"
+    },
+    {
+      "text": "좋아요! 인증이 잘 됐어요~ 계속 진행할게요!",
+      "filename": "auth_success_3.wav"
+    },
+    {
+      "text": "인증 완료! 감사합니다~ 바로 시작할게요!",
+      "filename": "auth_success_4.wav"
+    },
+    {
+      "text": "완벽해요! 인증됐으니까 이제 작업 시작해볼게요~",
+      "filename": "auth_success_5.wav"
+    },
+    {
+      "text": "야호! 인증 성공이에요~ 바로 진행할게요!",
+      "filename": "auth_success_6.wav"
+    },
+    {
+      "text": "인증됐어요! 고마워요~ 이제 시작해볼까요?",
+      "filename": "auth_success_7.wav"
+    },
+    {
+      "text": "좋아요! 인증 완료! 작업 계속할게요~",
+      "filename": "auth_success_8.wav"
+    },
+    {
+      "text": "인증 성공했어요! 이제 막힘없이 진행할 수 있어요~",
+      "filename": "auth_success_9.wav"
+    },
+    {
+      "text": "완료! 인증해주셔서 감사해요~ 바로 갈게요!",
+      "filename": "auth_success_10.wav"
     }
   ],
   "elicitation_dialog": [
     {
       "text": "여기에 입력이 필요해요! 작성해주시겠어요?",
       "filename": "elicitation_dialog_1.wav"
+    },
+    {
+      "text": "잠깐! 여기 뭔가 입력해주셔야 해요~",
+      "filename": "elicitation_dialog_2.wav"
+    },
+    {
+      "text": "이 부분은 직접 입력해주셔야 해요! 부탁드려요~",
+      "filename": "elicitation_dialog_3.wav"
+    },
+    {
+      "text": "여기서 선택이 필요해요! 어떤 걸로 할까요?",
+      "filename": "elicitation_dialog_4.wav"
+    },
+    {
+      "text": "잠시만요! 여기 답변해주셔야 진행할 수 있어요~",
+      "filename": "elicitation_dialog_5.wav"
+    },
+    {
+      "text": "이건 제가 결정하기 어려워요! 선택해주시겠어요?",
+      "filename": "elicitation_dialog_6.wav"
+    },
+    {
+      "text": "여기 입력창이 떴어요! 작성 부탁드려요~",
+      "filename": "elicitation_dialog_7.wav"
+    },
+    {
+      "text": "음... 여기는 직접 골라주셔야 할 것 같아요!",
+      "filename": "elicitation_dialog_8.wav"
+    },
+    {
+      "text": "잠깐! 여기서 뭘 해야 할지 알려주세요~",
+      "filename": "elicitation_dialog_9.wav"
+    },
+    {
+      "text": "이거 어떻게 할까요? 선택해주시면 바로 할게요!",
+      "filename": "elicitation_dialog_10.wav"
     }
   ]
 }

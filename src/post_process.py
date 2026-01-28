@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Audio post-processing pipeline for TTS output enhancement and source separation."""
 
-import numpy as np
-import soundfile as sf
-from pathlib import Path
-from typing import Optional, Tuple
+import shutil
 import subprocess
 import tempfile
-import shutil
+from pathlib import Path
+
+import numpy as np
+import soundfile as sf
 
 # Lazy imports to avoid loading heavy libraries until needed
 _noisereduce = None
@@ -17,11 +17,13 @@ _pyloudnorm = None
 
 # ============== Source Separation (Demucs) ==============
 
+
 def separate_vocals(
     input_path: Path,
-    output_dir: Optional[Path] = None,
+    output_dir: Path | None = None,
     model: str = "htdemucs",
     device: str = "auto",
+    quiet: bool = True,
 ) -> Path:
     """
     Separate vocals from background music using Demucs.
@@ -31,6 +33,7 @@ def separate_vocals(
         output_dir: Directory for output (default: same as input)
         model: Demucs model to use (htdemucs, htdemucs_ft, mdx_extra)
         device: Device to use (auto, cuda, cpu, mps)
+        quiet: Suppress demucs progress output
 
     Returns:
         Path to extracted vocals file
@@ -45,6 +48,7 @@ def separate_vocals(
     # Determine device
     if device == "auto":
         import torch
+
         if torch.cuda.is_available():
             device = "cuda"
         elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -54,16 +58,26 @@ def separate_vocals(
 
     # Run demucs
     cmd = [
-        "python", "-m", "demucs",
-        "--two-stems", "vocals",
-        "-n", model,
-        "-d", device,
-        "-o", str(output_dir),
+        "python",
+        "-m",
+        "demucs",
+        "--two-stems",
+        "vocals",
+        "-n",
+        model,
+        "-d",
+        device,
+        "-o",
+        str(output_dir),
         str(input_path),
     ]
 
-    print(f"Running Demucs ({model}) on {device}...")
-    subprocess.run(cmd, check=True)
+    if quiet:
+        # Suppress tqdm and other output
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        print(f"Running Demucs ({model}) on {device}...")
+        subprocess.run(cmd, check=True)
 
     # Find output vocals file
     stem_name = input_path.stem
@@ -81,6 +95,7 @@ def separate_vocals_to_file(
     model: str = "htdemucs",
     device: str = "auto",
     cleanup: bool = True,
+    quiet: bool = True,
 ) -> Path:
     """
     Separate vocals and save to a specific output path.
@@ -91,6 +106,7 @@ def separate_vocals_to_file(
         model: Demucs model to use
         device: Device to use
         cleanup: Remove intermediate files after extraction
+        quiet: Suppress demucs progress output
 
     Returns:
         Path to extracted vocals file
@@ -103,7 +119,7 @@ def separate_vocals_to_file(
         temp_dir = Path(temp_dir)
 
         # Run separation
-        vocals_path = separate_vocals(input_path, temp_dir, model, device)
+        vocals_path = separate_vocals(input_path, temp_dir, model, device, quiet=quiet)
 
         # Copy to final destination
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -129,6 +145,7 @@ def _get_noisereduce():
     global _noisereduce
     if _noisereduce is None:
         import noisereduce as nr
+
         _noisereduce = nr
     return _noisereduce
 
@@ -137,6 +154,7 @@ def _get_pedalboard():
     global _pedalboard
     if _pedalboard is None:
         import pedalboard
+
         _pedalboard = pedalboard
     return _pedalboard
 
@@ -145,6 +163,7 @@ def _get_pyloudnorm():
     global _pyloudnorm
     if _pyloudnorm is None:
         import pyloudnorm as pyln
+
         _pyloudnorm = pyln
     return _pyloudnorm
 
@@ -208,10 +227,12 @@ def apply_voice_eq(
     if audio.ndim == 1:
         audio = audio.reshape(-1, 1)
 
-    board = pb.Pedalboard([
-        pb.HighpassFilter(cutoff_frequency_hz=highpass_freq),
-        pb.LowpassFilter(cutoff_frequency_hz=lowpass_freq),
-    ])
+    board = pb.Pedalboard(
+        [
+            pb.HighpassFilter(cutoff_frequency_hz=highpass_freq),
+            pb.LowpassFilter(cutoff_frequency_hz=lowpass_freq),
+        ]
+    )
 
     processed = board(audio.T, sample_rate).T
     return processed.squeeze()
@@ -244,16 +265,18 @@ def apply_dynamics(
     if audio.ndim == 1:
         audio = audio.reshape(-1, 1)
 
-    board = pb.Pedalboard([
-        pb.Compressor(
-            threshold_db=compressor_threshold_db,
-            ratio=compressor_ratio,
-            attack_ms=5.0,
-            release_ms=100.0,
-        ),
-        pb.Gain(gain_db=makeup_gain_db),
-        pb.Limiter(threshold_db=limiter_threshold_db),
-    ])
+    board = pb.Pedalboard(
+        [
+            pb.Compressor(
+                threshold_db=compressor_threshold_db,
+                ratio=compressor_ratio,
+                attack_ms=5.0,
+                release_ms=100.0,
+            ),
+            pb.Gain(gain_db=makeup_gain_db),
+            pb.Limiter(threshold_db=limiter_threshold_db),
+        ]
+    )
 
     processed = board(audio.T, sample_rate).T
     return processed.squeeze()
@@ -275,6 +298,8 @@ def normalize_loudness(
     Returns:
         Loudness-normalized audio signal
     """
+    import warnings
+
     pyln = _get_pyloudnorm()
 
     # Ensure float64 for pyloudnorm
@@ -285,13 +310,25 @@ def normalize_loudness(
     current_loudness = meter.integrated_loudness(audio_float)
 
     # Skip if audio is silent or too quiet to measure
-    if current_loudness == float('-inf') or np.isnan(current_loudness):
+    if current_loudness == float("-inf") or np.isnan(current_loudness):
         return audio
 
-    # Normalize to target
-    normalized = pyln.normalize.loudness(audio_float, current_loudness, target_lufs)
+    # Calculate gain needed
+    gain_db = target_lufs - current_loudness
+    gain_linear = 10 ** (gain_db / 20.0)
 
-    # Prevent clipping
+    # Check if normalization would cause clipping
+    peak_after = np.max(np.abs(audio_float)) * gain_linear
+    if peak_after > 1.0:
+        # Reduce gain to prevent clipping (leave 1dB headroom)
+        gain_linear = 0.89 / np.max(np.abs(audio_float))
+
+    # Apply gain manually to avoid pyloudnorm's clipping warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        normalized = audio_float * gain_linear
+
+    # Final safety check
     max_val = np.max(np.abs(normalized))
     if max_val > 1.0:
         normalized = normalized / max_val * 0.99
@@ -332,7 +369,8 @@ def post_process_audio(
     # 1. Noise reduction
     if denoise:
         processed = reduce_noise(
-            processed, sample_rate,
+            processed,
+            sample_rate,
             stationary=False,
             prop_decrease=denoise_strength,
         )
@@ -354,7 +392,7 @@ def post_process_audio(
 
 def post_process_file(
     input_path: Path,
-    output_path: Optional[Path] = None,
+    output_path: Path | None = None,
     **kwargs,
 ) -> Path:
     """
@@ -386,7 +424,7 @@ def post_process_file(
 
 def post_process_directory(
     input_dir: Path,
-    output_dir: Optional[Path] = None,
+    output_dir: Path | None = None,
     pattern: str = "*.wav",
     **kwargs,
 ) -> list[Path]:

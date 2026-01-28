@@ -48,6 +48,7 @@ def detect_device() -> DeviceInfo:
         # Check for FlashAttention support
         try:
             import flash_attn  # noqa: F401
+
             attn_impl = "flash_attention_2"
         except ImportError:
             attn_impl = "sdpa"
@@ -65,8 +66,7 @@ def detect_device() -> DeviceInfo:
         # Get Mac model info
         try:
             result = subprocess.run(
-                ["sysctl", "-n", "machdep.cpu.brand_string"],
-                capture_output=True, text=True
+                ["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True
             )
             cpu_name = result.stdout.strip()
         except Exception:
