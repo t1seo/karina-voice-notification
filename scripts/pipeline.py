@@ -360,7 +360,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
 
     from qwen_tts import Qwen3TTSModel
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    NOTIFICATIONS_DIR.mkdir(parents=True, exist_ok=True)
 
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
         progress.add_task(f"Loading Qwen3-TTS 1.7B model on {device_info.device_type.value.upper()}...", total=None)
@@ -378,7 +378,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
         task = progress.add_task("Generating notifications...", total=total)
 
         for notification_type, lines in NOTIFICATION_LINES.items():
-            type_dir = OUTPUT_DIR / notification_type
+            type_dir = NOTIFICATIONS_DIR / notification_type
             type_dir.mkdir(parents=True, exist_ok=True)
 
             for line in lines:
@@ -392,7 +392,7 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
                 sf.write(str(output_path), processed_audio, sr)
                 progress.advance(task)
 
-    logger.success(f"All notifications generated in: {OUTPUT_DIR}")
+    logger.success(f"All notifications generated in: {NOTIFICATIONS_DIR}")
 
     table = Table(title="Generated Files", box=box.ROUNDED)
     table.add_column("Type", style="cyan")
@@ -409,7 +409,7 @@ def show_completion():
     """Show completion message."""
     console.print(Panel.fit(
         "[bold green]✨ Pipeline Complete![/bold green]\n\n"
-        f"Generated notifications are in: [cyan]{OUTPUT_DIR}[/cyan]\n\n"
+        f"Generated notifications are in: [cyan]{NOTIFICATIONS_DIR}[/cyan]\n\n"
         "[dim]Next steps:[/dim]\n"
         "1. Review generated audio files\n"
         "2. Copy best ones to ~/.claude/sounds/\n"
