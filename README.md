@@ -22,10 +22,13 @@ Generate Claude Code notification sounds with **any voice** using AI voice cloni
 ## Features
 
 - **Voice Cloning** - Clone any voice from YouTube videos using Qwen3-TTS 1.7B
-- **BGM Removal** - Automatically separate vocals from background music using Demucs AI
-- **Audio Post-processing** - Professional audio enhancement (noise reduction, EQ, compression, loudness normalization)
+- **BGM Removal (Recommended)** - Automatically separate vocals from background music using Demucs AI
+- **Audio Normalization** - Automatically normalize audio to prevent clipping
+- **Audio Post-processing** - Optional audio enhancement (noise reduction, EQ, compression, loudness normalization)
 - **Multi-language Support** - 10 languages for TTS (Korean, English, Chinese, Japanese, etc.)
 - **Interactive Menus** - Easy-to-use keyboard navigation for all options
+- **Output Cleanup** - Option to delete previous outputs when starting a new pipeline
+- **Code Quality** - Pre-commit hooks with ruff linter/formatter
 
 ---
 
@@ -200,29 +203,27 @@ cp output/notifications/*/*.wav ~/.claude/sounds/
 
 # Install hook script
 mkdir -p ~/.claude/hooks
-cp src/claude_notification_hook.py ~/.claude/hooks/
+cp .claude/skills/setup-notifications/scripts/claude_notification_hook.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/claude_notification_hook.py
 ```
 
-Then add the hook configuration to `~/.claude/settings.json`. See [CLAUDE.md](CLAUDE.md) for detailed setup instructions.
+Then add the hook configuration to `~/.claude/settings.json`:
 
----
-
-## Project Structure
-
-```
-project-karina-voice/
-├── src/
-│   ├── pipeline.py              # Main pipeline orchestrator
-│   ├── post_process.py          # Audio post-processing & source separation
-│   ├── generate_notifications.py # Qwen3-TTS voice cloning
-│   └── claude_notification_hook.py # Claude Code hook
-├── output/
-│   ├── raw/                     # Downloaded audio
-│   ├── clean/                   # Selected voice segments
-│   └── notifications/           # Generated notification sounds
-├── notification_lines.json      # Customizable phrases (50 total)
-└── pixi.toml                    # Dependencies
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/claude_notification_hook.py", "timeout": 10}]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/claude_notification_hook.py", "timeout": 10}]
+      }
+    ]
+  }
+}
 ```
 
 ---

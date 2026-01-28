@@ -22,10 +22,13 @@ AI 음성 복제 기술을 사용하여 **어떤 목소리로든** Claude Code �
 ## 주요 기능
 
 - **음성 복제** - Qwen3-TTS 1.7B를 사용하여 YouTube 영상에서 목소리 복제
-- **BGM 제거** - Demucs AI로 배경음악에서 보컬 자동 분리
-- **오디오 후처리** - 전문적인 오디오 향상 (노이즈 제거, EQ, 컴프레서, 음량 정규화)
+- **BGM 제거 (권장)** - Demucs AI로 배경음악에서 보컬 자동 분리
+- **오디오 정규화** - 클리핑 방지를 위한 자동 오디오 정규화
+- **오디오 후처리** - 선택적 오디오 향상 (노이즈 제거, EQ, 컴프레서, 음량 정규화)
 - **다국어 지원** - TTS 10개 언어 지원 (한국어, 영어, 중국어, 일본어 등)
 - **인터랙티브 메뉴** - 키보드로 쉽게 조작하는 메뉴 시스템
+- **출력 정리** - 새 파이프라인 시작 시 이전 출력 삭제 옵션
+- **코드 품질** - Pre-commit hooks와 ruff 린터/포맷터
 
 ---
 
@@ -200,29 +203,27 @@ cp output/notifications/*/*.wav ~/.claude/sounds/
 
 # Hook 스크립트 설치
 mkdir -p ~/.claude/hooks
-cp src/claude_notification_hook.py ~/.claude/hooks/
+cp .claude/skills/setup-notifications/scripts/claude_notification_hook.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/claude_notification_hook.py
 ```
 
-그런 다음 `~/.claude/settings.json`에 hook 설정을 추가합니다. 자세한 설정 방법은 [CLAUDE.md](CLAUDE.md)를 참조하세요.
+그런 다음 `~/.claude/settings.json`에 hook 설정을 추가합니다:
 
----
-
-## 프로젝트 구조
-
-```
-project-karina-voice/
-├── src/
-│   ├── pipeline.py              # 메인 파이프라인 오케스트레이터
-│   ├── post_process.py          # 오디오 후처리 & 소스 분리
-│   ├── generate_notifications.py # Qwen3-TTS 음성 복제
-│   └── claude_notification_hook.py # Claude Code 훅
-├── output/
-│   ├── raw/                     # 다운로드된 오디오
-│   ├── clean/                   # 선택된 음성 세그먼트
-│   └── notifications/           # 생성된 알림음
-├── notification_lines.json      # 커스터마이징 가능한 문구 (총 50개)
-└── pixi.toml                    # 의존성
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/claude_notification_hook.py", "timeout": 10}]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/claude_notification_hook.py", "timeout": 10}]
+      }
+    ]
+  }
+}
 ```
 
 ---
