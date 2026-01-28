@@ -6,7 +6,6 @@ channels = ["conda-forge", "pytorch"]
 platforms = ["linux-64", "osx-arm64"]
 
 [dependencies]
-# Common dependencies
 python = "3.12.*"
 ffmpeg = ">=6.0"
 yt-dlp = ">=2024.1.0"
@@ -14,7 +13,6 @@ sox = ">=14.4.2"
 pip = ">=24.0"
 
 [feature.linux.dependencies]
-# Linux CUDA dependencies
 cuda-toolkit = ">=12.0"
 cudnn = ">=8.0"
 
@@ -24,37 +22,12 @@ platforms = ["linux-64"]
 [feature.mac]
 platforms = ["osx-arm64"]
 
-[pypi-dependencies]
-# Common Python packages
-pydub = ">=0.25.1"
-torch = ">=2.0.0"
-soundfile = ">=0.12.0"
-huggingface-hub = ">=0.20.0"
-scipy = ">=1.10.0"
-loguru = ">=0.7.0"
-rich = ">=13.0.0"
-qwen-tts = "*"
-readchar = ">=4.0.0"
-
-[feature.linux.pypi-dependencies]
-# Linux: faster-whisper for GPU
-faster-whisper = ">=1.0.0"
-
-[feature.mac.pypi-dependencies]
-# Mac: mlx-whisper for Apple Silicon
-mlx = ">=0.5.0"
-mlx-whisper = ">=0.4.0"
-
 [environments]
-default = { solve-group = "default" }
-linux = { features = ["linux"], solve-group = "default" }
-mac = { features = ["mac"], solve-group = "default" }
+linux = { features = ["linux"], solve-group = "linux" }
+mac = { features = ["mac"], solve-group = "mac" }
 
 [tasks]
 pipeline = "python scripts/pipeline.py"
-
-[target.osx-arm64.tasks]
-pipeline = "python scripts/pipeline.py"
-
-[activation]
-scripts = ["scripts/activate.sh"]
+install-deps = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar"
+install-deps-mac = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar mlx mlx-whisper"
+install-deps-linux = "pip install pydub torch soundfile huggingface-hub scipy loguru rich qwen-tts readchar faster-whisper"
