@@ -1,26 +1,26 @@
 ---
 name: setup-voice-notifications
-description: Karina 음성 알림 시스템을 설치합니다. Claude Code 알림음 설정, 카리나 음성 설치, notification hook 설정 시 사용합니다.
+description: Install Karina voice notification system for Claude Code. Use when setting up notification sounds, installing voice alerts, or configuring notification hooks.
 disable-model-invocation: true
 allowed-tools: Bash, Read, Edit, Write
 ---
 
-# Karina Voice Notification 설치
+# Karina Voice Notification Setup
 
-이 스킬은 Karina 음성 알림 시스템을 Claude Code에 설치합니다.
+This skill installs the Karina voice notification system for Claude Code.
 
-## 설치 단계
+## Installation Steps
 
-### Step 1: 사운드 파일 복사
+### Step 1: Copy sound files
 
 ```bash
 mkdir -p ~/.claude/sounds
 cp "$ARGUMENTS/output/notifications/"*/*.wav ~/.claude/sounds/
 ```
 
-> `$ARGUMENTS`가 없으면 현재 디렉토리(`$(pwd)`)를 사용합니다.
+> If `$ARGUMENTS` is empty, use current directory (`$(pwd)`).
 
-### Step 2: Hook 스크립트 설치
+### Step 2: Install hook script
 
 ```bash
 mkdir -p ~/.claude/hooks
@@ -28,9 +28,9 @@ cp "$ARGUMENTS/src/claude_notification_hook.py" ~/.claude/hooks/
 chmod +x ~/.claude/hooks/claude_notification_hook.py
 ```
 
-### Step 3: settings.json 설정
+### Step 3: Configure settings.json
 
-`~/.claude/settings.json`을 읽고 아래 hooks 설정을 추가/병합합니다. 기존 hooks 섹션이 있으면 Notification과 Stop hooks를 병합합니다:
+Read `~/.claude/settings.json` and add/merge the hooks configuration below. If a hooks section already exists, merge the Notification and Stop hooks:
 
 ```json
 {
@@ -61,9 +61,9 @@ chmod +x ~/.claude/hooks/claude_notification_hook.py
 }
 ```
 
-### Step 4: 설치 확인
+### Step 4: Verify installation
 
-설치된 파일을 확인하고 결과를 보고합니다:
+Check installed files and report results:
 
 ```bash
 echo "Sound files:"
@@ -73,13 +73,13 @@ echo "Hook script:"
 ls -la ~/.claude/hooks/claude_notification_hook.py 2>/dev/null || echo "Hook script not found"
 ```
 
-## 알림 유형
+## Notification Types
 
 | Type | Sound Files | Trigger |
 |------|-------------|---------|
-| `permission_prompt` | permission_prompt_*.wav | 권한 요청 시 |
-| `idle_prompt` | idle_prompt_*.wav | 작업 완료 / Stop 이벤트 |
-| `auth_success` | auth_success_*.wav | 인증 성공 시 |
-| `elicitation_dialog` | elicitation_dialog_*.wav | 사용자 입력 필요 시 |
+| `permission_prompt` | permission_prompt_*.wav | Permission request |
+| `idle_prompt` | idle_prompt_*.wav | Task complete / Stop event |
+| `auth_success` | auth_success_*.wav | Authentication success |
+| `elicitation_dialog` | elicitation_dialog_*.wav | User input required |
 
-**참고:** 각 알림 유형에 여러 사운드 파일이 있으면 (`_1.wav`, `_2.wav` 등) 매번 랜덤으로 재생됩니다.
+**Note:** When multiple sound files exist for a notification type (e.g., `_1.wav`, `_2.wav`), a random one is played each time.
