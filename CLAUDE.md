@@ -11,27 +11,27 @@ mkdir -p ~/.claude/sounds
 cp output/*/*.wav ~/.claude/sounds/
 ```
 
-### 2. settings.json 설정
+### 2. Hook 스크립트 설치 (권장)
+
+> **Note**: Claude Code의 `matcher` 기반 Notification hook이 안정적으로 작동하지 않아서, 통합 Python 스크립트 방식을 사용합니다. 이 방식은 `notification_type` 필드를 파싱하여 해당 소리를 재생합니다.
+
+```bash
+mkdir -p ~/.claude/hooks
+cp scripts/claude_notification_hook.py ~/.claude/hooks/
+chmod +x ~/.claude/hooks/claude_notification_hook.py
+```
 
 `~/.claude/settings.json`의 `hooks` 섹션에 추가:
 
 ```json
 "Notification": [
   {
-    "matcher": "permission_prompt",
-    "hooks": [{"type": "command", "command": "afplay ~/.claude/sounds/permission_prompt_1.wav", "timeout": 10}]
-  },
+    "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/claude_notification_hook.py", "timeout": 10}]
+  }
+],
+"Stop": [
   {
-    "matcher": "idle_prompt",
-    "hooks": [{"type": "command", "command": "afplay ~/.claude/sounds/idle_prompt_1.wav", "timeout": 10}]
-  },
-  {
-    "matcher": "auth_success",
-    "hooks": [{"type": "command", "command": "afplay ~/.claude/sounds/auth_success_1.wav", "timeout": 10}]
-  },
-  {
-    "matcher": "elicitation_dialog",
-    "hooks": [{"type": "command", "command": "afplay ~/.claude/sounds/elicitation_dialog_1.wav", "timeout": 10}]
+    "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/claude_notification_hook.py", "timeout": 10}]
   }
 ]
 ```

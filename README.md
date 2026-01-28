@@ -67,50 +67,39 @@ mkdir -p ~/.claude/sounds
 cp output/*/*.wav ~/.claude/sounds/
 ```
 
-### 2. hooks 설정
+### 2. Hook 스크립트 설치 (권장)
 
-`~/.claude/settings.json` 파일에 다음 내용 추가:
+> **Note**: Claude Code의 `matcher` 기반 Notification hook이 안정적으로 작동하지 않는 경우가 있어, 통합 Python 스크립트 방식을 권장합니다.
+
+```bash
+# hook 스크립트 복사
+mkdir -p ~/.claude/hooks
+cp scripts/claude_notification_hook.py ~/.claude/hooks/
+chmod +x ~/.claude/hooks/claude_notification_hook.py
+```
+
+`~/.claude/settings.json`의 `hooks` 섹션에 추가:
 
 ```json
 {
   "hooks": {
     "Notification": [
       {
-        "matcher": "permission_prompt",
         "hooks": [
           {
             "type": "command",
-            "command": "afplay ~/.claude/sounds/permission_prompt_1.wav",
+            "command": "python3 ~/.claude/hooks/claude_notification_hook.py",
             "timeout": 10
           }
         ]
-      },
+      }
+    ],
+    "Stop": [
       {
-        "matcher": "idle_prompt",
         "hooks": [
           {
             "type": "command",
-            "command": "afplay ~/.claude/sounds/idle_prompt_1.wav",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "auth_success",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay ~/.claude/sounds/auth_success_1.wav",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "elicitation_dialog",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay ~/.claude/sounds/elicitation_dialog_1.wav",
+            "command": "python3 ~/.claude/hooks/claude_notification_hook.py",
             "timeout": 10
           }
         ]
@@ -120,25 +109,44 @@ cp output/*/*.wav ~/.claude/sounds/
 }
 ```
 
+이 방식은 `notification_type` 필드를 파싱하여 해당 소리를 자동으로 재생합니다.
+
 ### 3. 알림 유형 설명
 
-| Hook Matcher | 발생 시점 |
-|--------------|----------|
-| `permission_prompt` | Claude가 위험한 명령 실행 전 허락을 구할 때 |
-| `idle_prompt` | 작업 완료 후 사용자 응답을 기다릴 때 |
-| `auth_success` | 인증 성공 시 |
-| `elicitation_dialog` | 사용자 입력이 필요할 때 |
+| notification_type | 발생 시점 | 소리 파일 |
+|-------------------|----------|----------|
+| `permission_prompt` | Claude가 위험한 명령 실행 전 허락을 구할 때 | `permission_prompt_1.wav` |
+| `idle_prompt` | 작업 완료 후 60초 이상 대기할 때 | `idle_prompt_1.wav` |
+| `auth_success` | 인증 성공 시 | `auth_success_1.wav` |
+| `elicitation_dialog` | 사용자 입력이 필요할 때 (AskUserQuestion) | `elicitation_dialog_1.wav` |
+| Stop 이벤트 | Claude 응답 완료 시 | `idle_prompt_1.wav` |
 
 ### 4. Linux에서 사용
 
-macOS의 `afplay` 대신 Linux에서는:
+`scripts/claude_notification_hook.py`의 `afplay` 명령어를 수정:
 
-```bash
-# aplay 사용
-"command": "aplay ~/.claude/sounds/permission_prompt_1.wav"
+```python
+# macOS
+subprocess.Popen(["afplay", sound_file], ...)
 
-# 또는 paplay (PulseAudio)
-"command": "paplay ~/.claude/sounds/permission_prompt_1.wav"
+# Linux (ALSA)
+subprocess.Popen(["aplay", sound_file], ...)
+
+# Linux (PulseAudio)
+subprocess.Popen(["paplay", sound_file], ...)
+```
+
+### 5. Slack 연동 (선택)
+
+Slack 알림도 함께 받으려면 `~/.claude/settings.json`의 `env` 섹션에 추가:
+
+```json
+{
+  "env": {
+    "SLACK_BOT_TOKEN": "xoxb-your-token",
+    "SLACK_CHANNEL_ID": "C0123456789"
+  }
+}
 ```
 
 ---
