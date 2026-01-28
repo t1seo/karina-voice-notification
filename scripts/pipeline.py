@@ -41,18 +41,18 @@ OUTPUT_DIR = PROJECT_ROOT / "output" / "notifications"
 # Notification lines to generate
 NOTIFICATION_LINES = {
     "permission_prompt": [
-        {"text": "잠깐요! 이거 해도 될까요?", "filename": "permission_prompt_1.wav"},
-        {"text": "허락이 필요해요~", "filename": "permission_prompt_2.wav"},
+        {"text": "잠깐만요! 이거 실행해도 괜찮을까요? 허락해주세요~", "filename": "permission_prompt_1.wav"},
+        {"text": "잠시만요, 이 작업을 하려면 허락이 필요해요~", "filename": "permission_prompt_2.wav"},
     ],
     "idle_prompt": [
-        {"text": "다 했어요! 확인해주세요~", "filename": "idle_prompt_1.wav"},
-        {"text": "끝났어요, 봐주세요!", "filename": "idle_prompt_2.wav"},
+        {"text": "다 끝났어요! 결과 확인해주시면 감사하겠습니다~", "filename": "idle_prompt_1.wav"},
+        {"text": "작업이 완료되었어요, 한번 봐주시겠어요?", "filename": "idle_prompt_2.wav"},
     ],
     "auth_success": [
-        {"text": "인증 완료! 고마워요~", "filename": "auth_success_1.wav"},
+        {"text": "인증이 완료되었어요! 도와주셔서 정말 고마워요~", "filename": "auth_success_1.wav"},
     ],
     "elicitation_dialog": [
-        {"text": "여기 입력이 필요해요!", "filename": "elicitation_dialog_1.wav"},
+        {"text": "여기에 입력이 필요해요! 작성해주시겠어요?", "filename": "elicitation_dialog_1.wav"},
     ],
 }
 
@@ -287,14 +287,13 @@ def setup_tts_model():
     return local_dir
 
 
-def post_process_audio(audio: np.ndarray, sr: int, silence_ms: int = 300, speed: float = 0.67) -> tuple[np.ndarray, int]:
-    """Post-process audio: add silence at beginning and slow down.
+def post_process_audio(audio: np.ndarray, sr: int, silence_ms: int = 300) -> tuple[np.ndarray, int]:
+    """Post-process audio: add silence at beginning.
 
     Args:
         audio: Audio waveform
         sr: Sample rate
         silence_ms: Silence to add at beginning (milliseconds)
-        speed: Speed factor (0.67 = 1.5x slower)
 
     Returns:
         Processed audio and sample rate
@@ -303,13 +302,6 @@ def post_process_audio(audio: np.ndarray, sr: int, silence_ms: int = 300, speed:
     silence_samples = int(sr * silence_ms / 1000)
     silence = np.zeros(silence_samples, dtype=audio.dtype)
     audio_with_silence = np.concatenate([silence, audio])
-
-    # Slow down audio by resampling
-    if speed != 1.0:
-        # Resample to slow down (lower speed = longer audio)
-        num_samples = int(len(audio_with_silence) / speed)
-        audio_slowed = signal.resample(audio_with_silence, num_samples)
-        return audio_slowed.astype(np.float32), sr
 
     return audio_with_silence, sr
 
@@ -375,8 +367,8 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
                     non_streaming_mode=True,
                 )
 
-                # Post-process: add 300ms silence, slow down to 1.5x duration
-                processed_audio, sr = post_process_audio(wavs[0], sr, silence_ms=300, speed=0.67)
+                # Post-process: add 300ms silence at beginning
+                processed_audio, sr = post_process_audio(wavs[0], sr, silence_ms=300)
                 sf.write(str(output_path), processed_audio, sr)
                 progress.advance(task)
 
