@@ -6,8 +6,7 @@
   <img src="https://img.shields.io/badge/GPU-CUDA%2012.0%2B%20|%20Apple%20Silicon-green" alt="GPU">
   <img src="https://img.shields.io/badge/TTS-Qwen3--TTS%201.7B-orange" alt="TTS Model">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
-  <br>
-  <a href="README.ko.md"><img src="https://img.shields.io/badge/lang-한국어-red" alt="Korean"></a>
+  <a href="README.ko.md"><img src="https://img.shields.io/badge/README-한국어-red" alt="Korean"></a>
 </p>
 
 <p align="center">
