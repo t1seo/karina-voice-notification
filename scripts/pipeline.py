@@ -299,13 +299,15 @@ def generate_notifications(ref_audio_path: Path, ref_text: str, model_path: Path
     print()
 
 
+DEFAULT_YOUTUBE_URL = "https://www.youtube.com/watch?v=r96zEiIHVf4"
+
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python pipeline.py <youtube_url>")
-        print("Example: python pipeline.py https://www.youtube.com/watch?v=xxxxx")
-        sys.exit(1)
-
-    youtube_url = sys.argv[1]
+        youtube_url = DEFAULT_YOUTUBE_URL
+        print(f"Using default YouTube URL: {youtube_url}")
+    else:
+        youtube_url = sys.argv[1]
 
     print("\n" + "=" * 60)
     print("Karina Voice Notification Generator")
