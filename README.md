@@ -12,96 +12,144 @@
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
 </p>
 
-Claude Code 알림음을 aespa 카리나 음성으로 생성하는 파이프라인.
+<p align="center">
+  <a href="README.ko.md">한국어</a>
+</p>
+
+Generate Claude Code notification sounds with **aespa Karina's voice** using AI voice cloning technology.
+
+> **What is this?** This pipeline extracts a voice sample from YouTube, transcribes it, and uses Qwen3-TTS to generate custom notification sounds that play when Claude Code needs your attention.
+
+---
+
+## Features
+
+- **Voice Cloning**: Generate notifications in Karina's voice using Qwen3-TTS 1.7B
+- **Cross-Platform**: Works on Linux (CUDA) and macOS (Apple Silicon)
+- **Interactive Menu**: Easy-to-use arrow key navigation for segment selection
+- **Customizable**: Edit notification phrases and regenerate audio anytime
+
+---
 
 ## Requirements
 
 ### Linux (NVIDIA GPU)
-- GPU: NVIDIA A100 (권장) 또는 CUDA 지원 GPU
+- NVIDIA GPU with CUDA support (A100 recommended)
 - CUDA 12.0+
-- pixi 패키지 매니저
+- [pixi](https://pixi.sh) package manager
 
-### Mac (Apple Silicon)
-- Mac mini / MacBook with M1/M2/M3/M4 chip
-- RAM: 64GB 권장 (32GB 최소)
-- pixi 패키지 매니저
-
-## Setup
-
-```bash
-# pixi 설치
-curl -fsSL https://pixi.sh/install.sh | bash
-source ~/.bashrc  # or ~/.zshrc on Mac
-
-# 의존성 설치
-cd karina-tts-notification
-
-# Linux
-pixi install -e linux
-
-# Mac
-pixi install -e mac
-```
-
-## Usage
-
-```bash
-# Linux
-pixi run -e linux python src/pipeline.py
-
-# Mac
-pixi run -e mac python src/pipeline.py
-
-# 이미 다운로드된 오디오 사용
-pixi run -e mac python src/pipeline.py --skip-download
-```
-
-## Pipeline Steps
-
-1. **GPU Check** - CUDA 및 GPU 확인
-2. **Download Audio** - YouTube에서 오디오 추출 (yt-dlp)
-3. **Split Segments** - 30초 간격으로 15초 클립 생성
-4. **Select Segment** - 깨끗한 음성 구간 선택
-5. **Transcribe** - faster-whisper large-v3로 전사
-6. **Setup TTS** - Qwen3-TTS 1.7B 모델 다운로드
-7. **Generate** - 음성 복제로 알림음 생성
-
-## Generated Notifications
-
-| 유형 | 문구 | 파일 |
-|------|------|------|
-| permission_prompt | 잠깐만요! 이거 실행해도 괜찮을까요? 허락해주세요~ | `permission_prompt_1.wav` |
-| | 잠시만요, 이 작업을 하려면 허락이 필요해요~ | `permission_prompt_2.wav` |
-| idle_prompt | 다 끝났어요! 결과 한번 확인해주세요~ | `idle_prompt_1.wav` |
-| | 작업이 완료되었어요, 한번 봐주시겠어요? | `idle_prompt_2.wav` |
-| auth_success | 인증이 완료되었어요! 도와주셔서 정말 고마워요~ | `auth_success_1.wav` |
-| elicitation_dialog | 여기에 입력이 필요해요! 작성해주시겠어요? | `elicitation_dialog_1.wav` |
-
-생성된 파일: `output/`
+### macOS (Apple Silicon)
+- Mac with M1/M2/M3/M4 chip
+- 64GB RAM recommended (32GB minimum)
+- [pixi](https://pixi.sh) package manager
 
 ---
 
-## Claude Code 알림 설정
+## Quick Start
 
-### 1. 음성 파일 복사
+### 1. Install pixi
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | bash
+source ~/.bashrc  # or ~/.zshrc on Mac
+```
+
+### 2. Clone and Setup
+
+```bash
+git clone https://github.com/t1seo/project-karina-voice.git
+cd project-karina-voice
+
+# For Linux
+pixi install -e linux
+pixi run -e linux install-deps-linux
+
+# For macOS
+pixi install -e mac
+pixi run -e mac install-deps-mac
+```
+
+### 3. Run the Pipeline
+
+```bash
+# Linux
+pixi run -e linux pipeline
+
+# macOS
+pixi run -e mac pipeline
+```
+
+The interactive menu will guide you through:
+1. Downloading audio from YouTube
+2. Selecting a clean voice segment
+3. Transcribing the audio
+4. Generating notification sounds
+
+---
+
+## Choosing a Good Voice Sample
+
+> **Important**: For best results, choose a YouTube video with **voice only** (no background music). Clean, isolated vocals produce much better voice cloning results than audio mixed with music or sound effects.
+
+**Good sources:**
+- Interview clips
+- Solo speaking segments
+- Behind-the-scenes talking moments
+
+**Avoid:**
+- Music videos
+- Clips with background music
+- Noisy environments
+
+---
+
+## Pipeline Steps
+
+| Step | Description |
+|------|-------------|
+| 1. GPU Check | Detect CUDA/MPS availability |
+| 2. Download Audio | Extract audio from YouTube using yt-dlp |
+| 3. Split Segments | Create 15-second clips at 30-second intervals |
+| 4. Select Segment | Choose a clean voice segment (manual or auto) |
+| 5. Transcribe | Convert speech to text using Whisper |
+| 6. Setup TTS | Download Qwen3-TTS 1.7B model |
+| 7. Generate | Create notification sounds via voice cloning |
+
+---
+
+## Generated Notifications
+
+| Type | Phrase | File |
+|------|--------|------|
+| permission_prompt | Wait! Is it okay to run this? | `permission_prompt_1.wav` |
+| idle_prompt | All done! Please check the results~ | `idle_prompt_1.wav` |
+| auth_success | Authentication complete! | `auth_success_1.wav` |
+| elicitation_dialog | Input needed here! | `elicitation_dialog_1.wav` |
+
+Output files are saved to `output/notifications/`
+
+---
+
+## Claude Code Integration
+
+### 1. Copy Audio Files
 
 ```bash
 mkdir -p ~/.claude/sounds
-cp output/*/*.wav ~/.claude/sounds/
+cp output/notifications/*/*.wav ~/.claude/sounds/
 ```
 
-### 2. Hook 스크립트 설치 (권장)
-
-> **Note**: Claude Code의 `matcher` 기반 Notification hook이 안정적으로 작동하지 않는 경우가 있어, 통합 Python 스크립트 방식을 권장합니다.
+### 2. Install Hook Script
 
 ```bash
-# hook 스크립트 복사
 mkdir -p ~/.claude/hooks
 cp src/claude_notification_hook.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/claude_notification_hook.py
 ```
 
-`~/.claude/settings.json`의 `hooks` 섹션에 추가:
+### 3. Configure Claude Code
+
+Add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -132,55 +180,36 @@ chmod +x ~/.claude/hooks/claude_notification_hook.py
 }
 ```
 
-이 방식은 `notification_type` 필드를 파싱하여 해당 소리를 자동으로 재생합니다.
+### Notification Types
 
-### 3. 알림 유형 설명
-
-| notification_type | 발생 시점 | 소리 파일 |
-|-------------------|----------|----------|
-| `permission_prompt` | Claude가 위험한 명령 실행 전 허락을 구할 때 | `permission_prompt_1.wav` |
-| `idle_prompt` | 작업 완료 후 60초 이상 대기할 때 | `idle_prompt_1.wav` |
-| `auth_success` | 인증 성공 시 | `auth_success_1.wav` |
-| `elicitation_dialog` | 사용자 입력이 필요할 때 (AskUserQuestion) | `elicitation_dialog_1.wav` |
-| Stop 이벤트 | Claude 응답 완료 시 | `idle_prompt_1.wav` |
-
-### 4. Linux에서 사용
-
-`src/claude_notification_hook.py`의 `afplay` 명령어를 수정:
-
-```python
-# macOS
-subprocess.Popen(["afplay", sound_file], ...)
-
-# Linux (ALSA)
-subprocess.Popen(["aplay", sound_file], ...)
-
-# Linux (PulseAudio)
-subprocess.Popen(["paplay", sound_file], ...)
-```
+| Type | When it plays |
+|------|---------------|
+| `permission_prompt` | Claude asks permission before risky commands |
+| `idle_prompt` | Task complete, waiting 60+ seconds |
+| `auth_success` | Authentication successful |
+| `elicitation_dialog` | User input required |
+| Stop event | Claude response complete |
 
 ---
 
-## 알림 메시지 커스터마이징
+## Customization
 
-### 문구 변경
+### Change Notification Phrases
 
-`notification_lines.json` 파일 수정:
+Edit `notification_lines.json`:
 
 ```json
 {
   "permission_prompt": [
-    {"text": "새로운 문구를 여기에 입력하세요", "filename": "permission_prompt_1.wav"}
+    {"text": "Your custom phrase here", "filename": "permission_prompt_1.wav"}
   ]
 }
 ```
 
-### 새 음성 생성
-
-문구 수정 후 파이프라인 재실행:
+### Regenerate Audio
 
 ```bash
-pixi run python src/pipeline.py --skip-download
+pixi run -e mac pipeline --skip-download
 ```
 
 ---
@@ -188,24 +217,43 @@ pixi run python src/pipeline.py --skip-download
 ## Project Structure
 
 ```
-karina-tts-notification/
+project-karina-voice/
 ├── src/
-│   ├── pipeline.py           # 메인 파이프라인
-│   ├── download_audio.py     # YouTube 다운로드
-│   ├── extract_segment.py    # 오디오 분할
-│   ├── transcribe.py         # Whisper 전사
-│   ├── setup_qwen_tts.py     # TTS 모델 설정
-│   └── generate_notifications.py  # 알림음 생성
-├── assets/
-│   ├── raw/                  # 원본 오디오
-│   ├── clean/                # 정제된 오디오
-│   └── transrc/          # 전사 결과
-├── models/                   # TTS 모델 (자동 다운로드)
-├── output/                   # 생성된 알림음
-├── notification_lines.json   # 알림 문구 설정
-├── pixi.toml                 # 의존성 설정
-└── pixi.lock
+│   ├── pipeline.py              # Main pipeline
+│   ├── device_utils.py          # GPU detection
+│   ├── download_audio.py        # YouTube download
+│   ├── transcribe.py            # Whisper transcription
+│   ├── generate_notifications.py # Voice generation
+│   └── claude_notification_hook.py # Claude hook
+├── output/
+│   ├── raw/                     # Downloaded audio
+│   ├── clean/                   # Processed segments
+│   └── notifications/           # Generated sounds
+├── notification_lines.json      # Phrase configuration
+└── pixi.toml                    # Dependencies
 ```
+
+---
+
+## Troubleshooting
+
+### "No module named 'xxx'"
+Run the dependency installation:
+```bash
+pixi run -e mac install-deps-mac  # or install-deps-linux
+```
+
+### Poor voice quality
+- Use a cleaner voice sample without background music
+- Ensure the reference audio is 5-15 seconds
+- Try a different segment from the source video
+
+### Hook not playing sounds
+- Check that audio files exist in `~/.claude/sounds/`
+- Verify the hook script has execute permissions
+- Check `~/.claude/hooks/hook_debug.log` for errors
+
+---
 
 ## License
 
